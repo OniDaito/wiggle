@@ -4,7 +4,7 @@
  * █▄▀░▀▄██░▄█░█▄▀█░█▄▀█░██░▄▄
  * ██▄█▄██▄▄▄█▄▄▄▄█▄▄▄▄█▄▄█▄▄▄
  * ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
- * @file main.cc
+ * @file solange.cc
  * @author Benjamin Blundell - k1803390@kcl.ac.uk
  * @date 19/05/2021
  * @brief Parse our tiff files and create our masks

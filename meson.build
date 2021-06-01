@@ -16,9 +16,16 @@ include_dirs = [
 ]
 
 
-# A basic example using the library
-executable('basic',
-          'src/main.cc',
+# Solange
+executable('solange',
+          'src/solange.cc',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [masamune])
+
+# flatten
+executable('flatten',
+          'src/flatten.cc',
           install : false,
           include_directories : include_dirs,
           dependencies : [masamune])
