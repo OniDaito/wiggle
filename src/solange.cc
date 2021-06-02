@@ -19,6 +19,7 @@
 #include <masamune/util/string.h>
 #include <masamune/util/file.h>
 #include <masamune/image/tiff.h>
+#include <vector>
 
 using namespace masamune;
 
@@ -26,8 +27,59 @@ using namespace masamune;
 typedef struct {
     std::string image_path = ".";
     std::string output_path = ".";
+    std::string prefix = "";
+    bool flatten = false;
 } Options;
 
+void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
+std::vector<std::vector<size_t>> &neurons, int neuron_id) {
+
+    for (uint32_t d = 0; d < image_out.depth; d++) {
+
+        for (uint32_t y = 0; y < image_out.height; y++) {
+
+            for (uint32_t x = 0; x < image_out.width; x++) {
+                uint16_t val = image_in.image_data[d * image_out.height + y][x];
+                if (val != 0) {
+                    std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
+                        neurons[neuron_id].end(), static_cast<size_t>(val));
+                    if (it != neurons[neuron_id].end()) {
+                        uint8_t nval = neuron_id;
+                        image_out.image_data[d][y][x] = nval;
+                    } 
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Given a 3D image, flatten it.
+ * 
+ * @param mask - a 3D image
+
+ * @return a 2D vkn image
+ */
+vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
+    vkn::ImageU8L flat;
+    flat.width = mask.width;
+    flat.height = mask.height;
+    vkn::Alloc(flat);
+    
+    for (uint32_t d = 0; d < mask.depth; d++) {
+
+        for (uint32_t y = 0; y < flat.height; y++) {
+            for (uint32_t x = 0; x < flat.width; x++) {
+                uint16_t val = mask.image_data[d][y][x];
+                uint16_t ext = flat.image_data[y][x];
+                if (ext == 0) {
+                    flat.image_data[y][x] = val;
+                }
+            }
+        }
+    }
+    return flat;
+}
 
 /**
  * Given a tiff file and a log file, create a set of 
@@ -41,16 +93,14 @@ typedef struct {
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path) {
-    vkn::ImageU16L image;
-
+    vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
-
+    image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
     size_t idx = 0;
-    std::vector<std::vector<size_t>> neurons; // 0: ASI-1, 1: ASI-2, 2: ASJ-1, 3: ASJ-2
+    std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
     // Read the log file and extract the     
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         neurons.push_back(std::vector<size_t>());
     }
 
@@ -59,44 +109,50 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         if (util::ToLower(tokens[0]) == "associate") {
             idx += 1;
         } else {
-            neurons[idx-1].push_back(util::FromString<size_t>(tokens[0]));
+            neurons[idx].push_back(util::FromString<size_t>(tokens[0]));
         }
     }
 
-    // Export ASI-1 first. We split the tiffs so they have layers
-    vkn::ImageU8L3D asi1;
-    int neuron_id = 0;
-    asi1.width = image.width;
-    asi1.depth = 51;
-    asi1.height = image.height / asi1.depth ;
+    // Export ASI first. We split the tiffs so they have layers
+    vkn::ImageU8L3D asi;
+    asi.width = image_in.width;
+    asi.depth = 51;
+    asi.height = image_in.height / asi.depth;
+    vkn::Alloc(asi);
 
-    for (uint32_t d = 0; d < asi1.depth; d++) {
-        asi1.image_data.push_back(std::vector<std::vector<uint8_t>>());
-
-        for (uint32_t y = 0; y < asi1.height; y++) {
-            asi1.image_data[d].push_back(std::vector<uint8_t>());
-
-            for (uint32_t x = 0; x < asi1.width; x++) {
-                uint16_t val = image.image_data[d * asi1.height + y][x];
-                if (val == 0) {
-                    asi1.image_data[d][y].push_back(0);
-                } else {
-                    std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
-                        neurons[neuron_id].end(), static_cast<size_t>(val));
-                    if (it != neurons[neuron_id].end()) {
-                        asi1.image_data[d][y].push_back(1);
-                    } else {
-                        asi1.image_data[d][y].push_back(0);
-                    }
-                }
-            }
-        }
-    }
+    SetNeuron(image_in, asi, neurons, 0);
+    SetNeuron(image_in, asi, neurons, 1);
 
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
-    std::string image_id = tokens_log[0];
-    std::string output_path = options.output_path + "/" + image_id + "_asi1.tiff";
-    image::SaveTiff(output_path, asi1);
+    std::string image_id = util::StringRemove(tokens_log[0], "ID");
+    std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.tiff";
+    image::SaveTiff(output_path, asi);
+    if (options.flatten){
+        vkn::ImageU8L asi_flat = Flatten(asi);
+        image::SaveTiff(output_path, asi_flat);
+
+    } else {
+        image::SaveTiff(output_path, asi);
+    } 
+
+    // Now look at ASJ
+    vkn::ImageU8L3D asj;
+    asj.width = image_in.width;
+    asj.depth = 51;
+    asj.height = image_in.height / asj.depth;
+    vkn::Alloc(asj);
+
+    SetNeuron(image_in, asj, neurons, 2);
+    SetNeuron(image_in, asj, neurons, 3);
+
+    output_path = options.output_path + "/" + options.prefix + image_id + "_asj.tiff";
+    if (options.flatten){
+        vkn::ImageU8L asj_flat = Flatten(asj);
+        image::SaveTiff(output_path, asj_flat);
+
+    } else {
+        image::SaveTiff(output_path, asj);
+    }
 
     return true;
 }
@@ -108,12 +164,13 @@ int main (int argc, char ** argv) {
     static struct option long_options[] = {
         {"image-path", 1, 0, 0},
         {"output-path", 1, 0, 0},
+        {"prefix", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:p:f?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -122,6 +179,12 @@ int main (int argc, char ** argv) {
                 break;
             case 'o' :
                 options.output_path = std::string(optarg);
+                break;
+            case 'p' :
+                options.prefix = std::string(optarg);
+                break;
+            case 'f' :
+                options.flatten = true;
                 break;
         }
     }
