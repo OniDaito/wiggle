@@ -16,6 +16,7 @@
 #include <masamune/util/string.h>
 #include <masamune/util/file.h>
 #include <masamune/image/tiff.h>
+#include <masamune/image/basic.h>
 
 using namespace masamune;
 
@@ -71,6 +72,8 @@ bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel
     image_id = util::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
     image::SaveTiff(output_path, flattened);
+    std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
+    image::Save(output_path_png, flattened);
 
     return true;
 }
@@ -114,7 +117,7 @@ bool TiffToLayers(Options &options, std::string &tiff_path, bool top_channel) {
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
     image_id = util::StringRemove(image_id, "0xAutoStack");
-    std::string output_path = options.output_path + "/" + image_id + "_flat.tiff";
+    std::string output_path = options.output_path + "/" + image_id + "_layered.tiff";
     image::SaveTiff(output_path, flattened);
 
     return true;

@@ -19,6 +19,7 @@
 #include <masamune/util/string.h>
 #include <masamune/util/file.h>
 #include <masamune/image/tiff.h>
+#include <masamune/image/basic.h>
 #include <vector>
 
 using namespace masamune;
@@ -126,10 +127,13 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
     std::string image_id = util::StringRemove(tokens_log[0], "ID");
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.tiff";
+    std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_asi.png";
+
     image::SaveTiff(output_path, asi);
     if (options.flatten){
         vkn::ImageU8L asi_flat = Flatten(asi);
         image::SaveTiff(output_path, asi_flat);
+        image::Save(output_path_png, asi_flat);
 
     } else {
         image::SaveTiff(output_path, asi);
@@ -146,10 +150,12 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     SetNeuron(image_in, asj, neurons, 3);
 
     output_path = options.output_path + "/" + options.prefix + image_id + "_asj.tiff";
+    output_path_png = options.output_path + "/" + options.prefix + image_id + "_asj.png";
+
     if (options.flatten){
         vkn::ImageU8L asj_flat = Flatten(asj);
         image::SaveTiff(output_path, asj_flat);
-
+        image::Save(output_path_png, asj_flat);
     } else {
         image::SaveTiff(output_path, asj);
     }
