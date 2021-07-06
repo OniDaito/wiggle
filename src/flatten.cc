@@ -18,6 +18,8 @@
 #include <masamune/image/tiff.h>
 #include <masamune/image/basic.h>
 
+#include <algorithm>
+
 using namespace masamune;
 
 // Our command line options, held in a struct.
@@ -26,6 +28,7 @@ typedef struct {
     std::string output_path = ".";
     size_t num_layers = 51;
     bool max_intensity = false;
+    bool rename = false;
 } Options;
 
 
@@ -40,6 +43,7 @@ typedef struct {
  */
 
 bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel) {
+    static int idx = 0;
     vkn::ImageU16L image;
     vkn::ImageU16L flattened;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -70,11 +74,14 @@ bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
     image_id = util::StringRemove(image_id, "0xAutoStack");
-    std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
-    image::SaveTiff(output_path, flattened);
+    if (options.rename == true) {
+        image_id  = util::IntToStringLeadingZeroes(idx, 4);
+    }
+    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
+    // image::SaveTiff(output_path, flattened);
     std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
     image::Save(output_path_png, flattened);
-
+    idx += 1;
     return true;
 }
 
@@ -135,7 +142,7 @@ int main (int argc, char ** argv) {
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:l:m?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:l:mr?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -150,6 +157,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'm' :
                 options.max_intensity = true;
+                break;
+            case 'r' :
+                options.rename = true;
                 break;
         }
     }
@@ -167,6 +177,8 @@ int main (int argc, char ** argv) {
             tiff_files.push_back(filename);
         }
     }
+
+    std::sort(tiff_files.begin(), tiff_files.end());
 
     // Apparently we are missing one for some reason. Oh well
     // assert(tiff_files.size() == log_files.size());

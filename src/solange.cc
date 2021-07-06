@@ -30,6 +30,7 @@ typedef struct {
     std::string output_path = ".";
     std::string prefix = "";
     bool flatten = false;
+    bool rename = false;
 } Options;
 
 void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
@@ -98,6 +99,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::vector<std::string> lines = util::ReadFileLines(log_path);
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
     size_t idx = 0;
+    static int image_idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
     // Read the log file and extract the     
@@ -126,13 +128,18 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
     std::string image_id = util::StringRemove(tokens_log[0], "ID");
+
+    if (options.rename == true) {
+        image_id = util::IntToStringLeadingZeroes(image_idx, 4);
+    }
+
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.tiff";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_asi.png";
 
-    image::SaveTiff(output_path, asi);
+    //image::SaveTiff(output_path, asi);
     if (options.flatten){
         vkn::ImageU8L asi_flat = Flatten(asi);
-        image::SaveTiff(output_path, asi_flat);
+        //image::SaveTiff(output_path, asi_flat);
         image::Save(output_path_png, asi_flat);
 
     } else {
@@ -154,11 +161,12 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     if (options.flatten){
         vkn::ImageU8L asj_flat = Flatten(asj);
-        image::SaveTiff(output_path, asj_flat);
+        //image::SaveTiff(output_path, asj_flat);
         image::Save(output_path_png, asj_flat);
     } else {
         image::SaveTiff(output_path, asj);
     }
+    image_idx +=1;
 
     return true;
 }
@@ -176,7 +184,7 @@ int main (int argc, char ** argv) {
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:p:f?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:p:fr?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -191,6 +199,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'f' :
                 options.flatten = true;
+                break;
+            case 'r' :
+                options.rename = true;
                 break;
         }
     }
@@ -219,6 +230,8 @@ int main (int argc, char ** argv) {
 
     // Apparently we are missing one for some reason. Oh well
     // assert(tiff_files.size() == log_files.size());
+
+    std::sort(tiff_files.begin(), tiff_files.end());
 
     // Pair up the tiffs with their log file and process them.
     for (std::string tiff : tiff_files) {
