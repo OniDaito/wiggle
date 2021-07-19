@@ -28,7 +28,13 @@ typedef struct {
     std::string output_path = ".";
     size_t num_layers = 51;
     bool max_intensity = false;
+    bool flatten = false;
     bool rename = false;
+    bool bottom = false;
+    int channels = 2; // 2 Channels initially in these images
+    int offset_number = 0;
+    int width = 640; // The desired dimensions
+    int height = 300;
 } Options;
 
 
@@ -37,23 +43,21 @@ typedef struct {
  * 
  * @param options - the options struct
  * @param tiff_path - the file path to the tiff
- * @param top_channel - are we spitting out the top channel or bottom one?
  *
  * @return bool if success or not
  */
 
-bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel) {
+bool MaximumIntensity(Options &options, std::string &tiff_path) {
     static int idx = 0;
     vkn::ImageU16L image;
     vkn::ImageU16L flattened;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
     flattened.width = image.width;
-    flattened.height = image.height / (options.num_layers * 2); // Two channels
+    flattened.height = image.height / (options.num_layers * options.channels);
     vkn::Alloc(flattened);
-
     uint coff = 0;
 
-    if (!top_channel) {
+    if (options.bottom) {
         coff = flattened.height;
     }
 
@@ -62,7 +66,7 @@ bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel
         for (uint32_t y = 0; y < flattened.height; y++) {
 
             for (uint32_t x = 0; x < flattened.width; x++) {
-                uint16_t val = image.image_data[(d * flattened.height * 2) + coff + y][x];
+                uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
                 uint16_t ext = flattened.image_data[y][x];
                 if (val > ext){
                     flattened.image_data[y][x] = val;
@@ -74,12 +78,21 @@ bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
     image_id = util::StringRemove(image_id, "0xAutoStack");
+    std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
+
     if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(idx, 4);
+        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        output_path_png = options.output_path + "/" + image_id + "_mip.png";
+        std::cout << "Renaming " << tiff_path << " to " << output_path_png << std::endl;
     }
+
     // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
     // image::SaveTiff(output_path, flattened);
-    std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
+    if (flattened.width != options.width || flattened.height != options.height) {
+        std::cout << "Resizing " << output_path_png << std::endl;
+        image::Resize(flattened, options.width, options.height);
+    }
+
     image::Save(output_path_png, flattened);
     idx += 1;
     return true;
@@ -91,22 +104,21 @@ bool MaximumIntensity(Options &options, std::string &tiff_path, bool top_channel
  * 
  * @param options - the options struct
  * @param tiff_path - the file path to the tiff
- * @param top_channel - are we spitting out the top channel or bottom one?
  *
  * @return bool if success or not
  */
 
-bool TiffToLayers(Options &options, std::string &tiff_path, bool top_channel) {
+bool TiffToLayers(Options &options, std::string &tiff_path) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D flattened;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
     flattened.width = image.width;
     flattened.depth = options.num_layers;
-    flattened.height = image.height / (flattened.depth * 2); // Two channels
+    flattened.height = image.height / (flattened.depth * options.channels); // Two channels
     vkn::Alloc(flattened);
-
     uint coff = 0;
-    if (!top_channel) {
+
+    if (options.bottom) {
         coff = flattened.height;
     }
 
@@ -115,7 +127,7 @@ bool TiffToLayers(Options &options, std::string &tiff_path, bool top_channel) {
         for (uint32_t y = 0; y < flattened.height; y++) {
 
             for (uint32_t x = 0; x < flattened.width; x++) {
-                uint16_t val = image.image_data[(d * flattened.height * 2) + coff + y][x];
+                uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
                 flattened.image_data[d][y][x] = val;
             }
         }
@@ -142,7 +154,7 @@ int main (int argc, char ** argv) {
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:l:mr?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:l:mrn:bw:h:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -161,19 +173,32 @@ int main (int argc, char ** argv) {
             case 'r' :
                 options.rename = true;
                 break;
+            case 'n':
+                options.offset_number = util::FromString<int>(optarg);
+                break;
+            case 'b':
+                options.bottom = true;
+                break;
+            case 'w':
+                options.width = util::FromString<int>(optarg);
+                break;
+            case 'h':
+                options.height = util::FromString<int>(optarg);
+                break;
         }
     }
    
     //return EXIT_FAILURE;
-    std::cout<< "Loading images from " << options.image_path << std::endl;
+    std::cout << "Loading images from " << options.image_path << std::endl;
 
+    std::cout << "Options: max intensity " << options.max_intensity << ", bottom: " << options.bottom << " width: " << options.width
+        << " height: " << options.height << " Z layers: " << options.num_layers << std::endl;
     // Browse the directory looking for files
     std::vector<std::string> files = util::ListFiles(options.image_path);
     std::vector<std::string> tiff_files;
 
     for (std::string filename : files) {
         if (util::StringContains(filename, ".tif") && util::StringContains(filename, "AutoStack")) {
-            std::cout << filename << std::endl;
             tiff_files.push_back(filename);
         }
     }
@@ -186,10 +211,10 @@ int main (int argc, char ** argv) {
         // Bottom channel
         if (options.max_intensity) {
             std::cout << "MIP-ing: " << tiff << std::endl;
-            MaximumIntensity(options, tiff, false);
+            MaximumIntensity(options, tiff);
         } else {
             std::cout << "Flattening: " << tiff << std::endl;
-            TiffToLayers(options, tiff, false);
+            TiffToLayers(options, tiff);
         }
     }
 

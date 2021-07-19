@@ -16,9 +16,9 @@ include_dirs = [
 ]
 
 
-# Solange
-executable('solange',
-          'src/solange.cc',
+# dataset
+executable('dataset',
+          'src/dataset.cc',
           install : false,
           include_directories : include_dirs,
           dependencies : [masamune])
@@ -29,3 +29,11 @@ executable('flatten',
           install : false,
           include_directories : include_dirs,
           dependencies : [masamune])
+
+
+# Tests
+e = executable('test_basic',
+  'src/test/basic.cc',
+  include_directories : include_dirs,
+  dependencies : [masamune])
+test('Basic Test', e)

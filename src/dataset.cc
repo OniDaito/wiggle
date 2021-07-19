@@ -4,13 +4,16 @@
  * █▄▀░▀▄██░▄█░█▄▀█░█▄▀█░██░▄▄
  * ██▄█▄██▄▄▄█▄▄▄▄█▄▄▄▄█▄▄█▄▄▄
  * ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
- * @file solange.cc
+ * @file dataset.cc
  * @author Benjamin Blundell - k1803390@kcl.ac.uk
  * @date 19/05/2021
  * @brief Parse our tiff files and create our masks
  * 
- * Given a directory of worm information, create the masks
- * we need.
+ * Given a directory of worm information, create the
+ * masks and anything else we need for the dataset.
+ * 
+ * Internally we use the following codes for the neurons
+ * 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
  *
  */
 
@@ -31,8 +34,18 @@ typedef struct {
     std::string prefix = "";
     bool flatten = false;
     bool rename = false;
+    bool bottom = false;
+    int channels = 1; // Just one reporter, or two?
+    int offset_number = 0;
+    int image_slices = 51; // number of z-slices
+    int width = 640; // The desired dimensions
+    int height = 300;
 } Options;
 
+
+/**
+ * Check the area id against the neuron list, setting it to what it claims to be.
+ */
 void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
 std::vector<std::vector<size_t>> &neurons, int neuron_id) {
 
@@ -94,12 +107,11 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
  * @return bool if success or not
  */
 
-bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path) {
+bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
     vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
     size_t idx = 0;
-    static int image_idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
     // Read the log file and extract the     
@@ -119,7 +131,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     // Export ASI first. We split the tiffs so they have layers
     vkn::ImageU8L3D asi;
     asi.width = image_in.width;
-    asi.depth = 51;
+    asi.depth = options.image_slices;
     asi.height = image_in.height / asi.depth;
     vkn::Alloc(asi);
 
@@ -130,7 +142,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::string image_id = util::StringRemove(tokens_log[0], "ID");
 
     if (options.rename == true) {
-        image_id = util::IntToStringLeadingZeroes(image_idx, 4);
+        image_id = util::IntToStringLeadingZeroes(image_idx, 5);
     }
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.tiff";
@@ -139,6 +151,9 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     //image::SaveTiff(output_path, asi);
     if (options.flatten){
         vkn::ImageU8L asi_flat = Flatten(asi);
+        if (asi_flat.width != options.width || asi_flat.height != options.height) {
+            image::Resize(asi_flat, options.width, options.height);
+        }
         //image::SaveTiff(output_path, asi_flat);
         image::Save(output_path_png, asi_flat);
 
@@ -149,7 +164,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     // Now look at ASJ
     vkn::ImageU8L3D asj;
     asj.width = image_in.width;
-    asj.depth = 51;
+    asj.depth = options.image_slices;
     asj.height = image_in.height / asj.depth;
     vkn::Alloc(asj);
 
@@ -161,6 +176,9 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     if (options.flatten){
         vkn::ImageU8L asj_flat = Flatten(asj);
+        if (asj_flat.width != options.width || asj_flat.height != options.height) {
+            image::Resize(asj_flat, options.width, options.height);
+        }
         //image::SaveTiff(output_path, asj_flat);
         image::Save(output_path_png, asj_flat);
     } else {
@@ -184,7 +202,7 @@ int main (int argc, char ** argv) {
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:p:fr?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:p:frn:b:zw:h:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -203,11 +221,28 @@ int main (int argc, char ** argv) {
             case 'r' :
                 options.rename = true;
                 break;
+            case 'n':
+                options.offset_number = util::FromString<int>(optarg);
+                break;
+            case 'b':
+                options.bottom = true;
+                break;
+            case 'z':
+                options.image_slices = util::FromString<int>(optarg);
+                break;
+            case 'w':
+                options.width = util::FromString<int>(optarg);
+                break;
+            case 'h':
+                options.height = util::FromString<int>(optarg);
+                break;
         }
     }
+
+    int image_idx = 0;
    
     //return EXIT_FAILURE;
-    std::cout<< "Loading images from " << options.image_path << std::endl;
+    std::cout << "Loading images from " << options.image_path << std::endl;
 
     // Browse the directory looking for files
     std::vector<std::string> files = util::ListFiles(options.image_path);
@@ -241,9 +276,12 @@ int main (int argc, char ** argv) {
             std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.");
             if (tokens_log[0] == id){
                 std::cout << "Pairing " << tiff << " with " << log << std::endl;
-                ProcessTiff(options, tiff, log);
+                ProcessTiff(options, tiff, log, image_idx);
             }
         }
+        // We always move image_idx on by one. This way, we end up with non-contiguous numbers, but the 
+        // numbers will match the images output by the mips program.
+        image_idx += 1;
     }
 
 
