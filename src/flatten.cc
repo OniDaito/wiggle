@@ -203,7 +203,18 @@ int main (int argc, char ** argv) {
         }
     }
 
-    std::sort(tiff_files.begin(), tiff_files.end());
+      // We use a sort based on the last ID number - keeps it inline with the flatten program
+    struct {
+        bool operator()(std::string a, std::string b) const {
+            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.");
+            int ida = util::FromString<int>(util::StringRemove(tokens1[2], "0xAutoStack"));
+            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.");
+            int idb = util::FromString<int>(util::StringRemove(tokens2[2], "0xAutoStack"));
+            return ida < idb;
+        }
+    } SortOrder;
+
+    std::sort(tiff_files.begin(), tiff_files.end(), SortOrder);
 
     // Apparently we are missing one for some reason. Oh well
     // assert(tiff_files.size() == log_files.size());

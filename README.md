@@ -1,6 +1,8 @@
 # Wiggle
 
-A set of utilities for working with the Worm Data.
+A set of utilities for working with the Worm Data. 
+
+Typical use would be to point flatten at a directory of images, flattening them into a set of 16bit PNG files with a maximum intensity projection. Then, pointing dataset at the corresponding directory containing the analysis files. The resulting dataset will be ready for use with the U-Net or other dataset.
 
 ## flatten
 
@@ -27,7 +29,7 @@ The build commands are as follows:
 
 There are several options one can pass to both programs. An example run of dataset might be...
 
-    ./build/dataset -f -i /media/stuff/Projects/wormz/queelim/Solange_analysis/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./build/dataset -f -i -r /media/stuff/Projects/wormz/queelim/Solange_analysis/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
 and for flatten...
 
