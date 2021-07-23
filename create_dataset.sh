@@ -21,8 +21,8 @@ touch dataset.log
 IDX=0
 
 for d in in `ls $3` ; do
-    COUNT=${arr[$IDX]}
-    echo $COUNT $1/$d
-    ./build/dataset -f -r -n $COUNT -i $1/$d -o $2 >> dataset.log
+    COUNT=${counts[$IDX]}
+    echo $COUNT $3/$d
+    ./build/dataset -f -r -n $COUNT -i $3/$d -o $2 >> dataset.log
     ((IDX=IDX+1))
 done
