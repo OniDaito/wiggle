@@ -3,7 +3,12 @@
 
 # Flatten to get our mips
 touch flatten.log
-COUNT=0
+COUNT=`ls $2 | wc -l`
+if [ $COUNT != 0]
+then
+    ((COUNT=COUNT+1))
+fi
+
 echo $COUNT >> count.log
 
 for d in `ls $1` ; do
