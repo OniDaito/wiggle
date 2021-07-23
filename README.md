@@ -29,7 +29,7 @@ The build commands are as follows:
 
 There are several options one can pass to both programs. An example run of dataset might be...
 
-    ./build/dataset -f -i -r /media/stuff/Projects/wormz/queelim/Solange_analysis/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./build/dataset -f -r -i /media/stuff/Projects/wormz/queelim/Solange_analysis/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
 and for flatten...
 
