@@ -3,7 +3,7 @@
 touch flatten.log
 
 for d in $1/ ; do
-    COUNT=ls $2 | wc -l
+    COUNT=`ls $d | wc -l`
     echo $COUNT
     echo $COUNT >> count.log
     ./build/flatten -m -r -n $COUNT -i $d -o $2 >> flatten.log
