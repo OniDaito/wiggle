@@ -20,7 +20,7 @@ mapfile -t counts < count.log
 touch dataset.log
 IDX=0
 
-for d in in `ls $3` ; do
+for d in `ls $3` ; do
     COUNT=${counts[$IDX]}
     echo $COUNT $3/$d
     ./build/dataset -f -r -n $COUNT -i $3/$d -o $2 >> dataset.log
