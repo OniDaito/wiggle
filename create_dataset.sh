@@ -3,6 +3,7 @@
 touch flatten.log
 
 for d in `ls $1` ; do
+    echo $1/$d
     COUNT=`ls $1/$d | wc -l`
     echo $COUNT
     echo $COUNT >> count.log
