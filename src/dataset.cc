@@ -255,7 +255,7 @@ int main (int argc, char ** argv) {
 
     for (std::string filename : files) {
         std::cout << filename << std::endl;
-        if (util::StringContains(filename, ".tif")) {
+        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
             tiff_files.push_back(filename);
         }
         else if (util::StringContains(filename, ".dat")) {
@@ -296,7 +296,7 @@ int main (int argc, char ** argv) {
                 ProcessTiff(options, tiff, log, image_idx);
             }
         }
-        
+
         if (!paired){
             std::cout << "Failed to pair " << tiff << std::endl;
         }
