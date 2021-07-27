@@ -110,6 +110,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path) {
+    static int idx = 0;
     vkn::ImageU16L image;
     vkn::ImageU16L3D flattened;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -138,8 +139,22 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     std::string image_id = tokens_log[3];
     image_id = util::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
-    WriteFITS(output_path, flattened);
 
+    if (options.rename == true) {
+        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        output_path = options.output_path + "/" + image_id + "_layered.fits";
+        std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
+    }
+
+    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
+    // image::SaveTiff(output_path, flattened);
+    if (flattened.width != options.width || flattened.height != options.height) {
+        std::cout << "Resizing " << output_path << std::endl;
+        image::Resize(flattened, options.width, options.height);
+    }
+
+    WriteFITS(output_path, flattened);
+    idx += 1;
     return true;
 }
 
