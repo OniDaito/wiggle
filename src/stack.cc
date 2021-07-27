@@ -148,10 +148,10 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
 
     // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
     // image::SaveTiff(output_path, flattened);
-    if (flattened.width != options.width || flattened.height != options.height) {
+    /*if (flattened.width != options.width || flattened.height != options.height) {
         std::cout << "Resizing " << output_path << std::endl;
         image::Resize(flattened, options.width, options.height);
-    }
+    }*/
 
     WriteFITS(output_path, flattened);
     idx += 1;
