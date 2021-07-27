@@ -31,6 +31,13 @@ executable('flatten',
           include_directories : include_dirs,
           dependencies : [masamune, cfits])
 
+# stack
+executable('stack',
+          'src/stack.cc',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [masamune, cfits])
+
 
 # Tests
 e = executable('test_basic',
