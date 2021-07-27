@@ -9,7 +9,7 @@ if get_option('buildtype') == 'debug'
 endif
 
 masamune = dependency('masamune')
-qfits = dependency('qfits')
+cfits = dependency('cfitsio')
 
 # The include directories for the dependencies inside this project
 include_dirs = [
@@ -22,19 +22,19 @@ executable('dataset',
           'src/dataset.cc',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, qfits])
+          dependencies : [masamune, cfits])
 
 # flatten
 executable('flatten',
           'src/flatten.cc',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, qfits])
+          dependencies : [masamune, cfits])
 
 
 # Tests
 e = executable('test_basic',
   'src/test/basic.cc',
   include_directories : include_dirs,
-  dependencies : [masamune, qfits])
+  dependencies : [masamune, cfits])
 test('Basic Test', e)

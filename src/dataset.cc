@@ -74,7 +74,7 @@ std::vector<std::vector<size_t>> &neurons, int neuron_id) {
  * Given a 3D image, flatten it.
  * 
  * @param mask - a 3D image
-
+ * 
  * @return a 2D vkn image
  */
 vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
@@ -245,6 +245,7 @@ int main (int argc, char ** argv) {
    
     //return EXIT_FAILURE;
     std::cout << "Loading images from " << options.image_path << std::endl;
+    std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
 
     // Browse the directory looking for files
     std::vector<std::string> files = util::ListFiles(options.image_path);
@@ -286,6 +287,7 @@ int main (int argc, char ** argv) {
         bool paired = false;
         std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff), "_.");
         std::string id = tokens[0];
+
         for (std::string log : log_files) {
             std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.");
             if (tokens_log[0] == id) {
@@ -294,6 +296,7 @@ int main (int argc, char ** argv) {
                 ProcessTiff(options, tiff, log, image_idx);
             }
         }
+        
         if (!paired){
             std::cout << "Failed to pair " << tiff << std::endl;
         }
