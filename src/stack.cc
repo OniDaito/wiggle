@@ -127,9 +127,10 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
 
         for (uint32_t y = 0; y < flattened.height; y++) {
 
+            // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < flattened.width; x++) {
                 uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
-                flattened.image_data[d][y][x] = val;
+                flattened.image_data[d][flattened.height - y - 1][x] = val;
             }
         }
     }
