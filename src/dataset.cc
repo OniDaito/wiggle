@@ -18,6 +18,7 @@
  */
 
 #include <getopt.h>
+#include <fitsio.h>
 #include <masamune/masamune_prog.h>
 #include <masamune/util/string.h>
 #include <masamune/util/file.h>
@@ -40,6 +41,14 @@ typedef struct {
     int height = 300;
 } Options;
 
+
+void printerror( int status) {
+    if (status) {
+       fits_report_error(stderr, status);   // print error report
+       exit( status );                      // terminate the program, returning error status
+    }
+    return;
+}
 
 /**
  * Check the area id against the neuron list, setting it to what it claims to be.
@@ -98,6 +107,45 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
     return flat;
 }
 
+
+void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
+    fitsfile *fptr; 
+    int status, ii, jj;
+    long  fpixel, nelements, exposure;
+
+    // initialize FITS image parameters
+    int bitpix   =  BYTE_IMG; // 16-bit unsigned short pixel values
+    long naxis    =   3;        // 3D
+    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
+
+    remove(filename.c_str());   // Delete old file if it already exists
+    status = 0;                 // initialize status before calling fitsio routines
+
+    if (fits_create_file(&fptr, filename.c_str(), &status)) {
+         printerror( status );
+    } 
+
+    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
+        printerror( status ); 
+    }
+                  
+    fpixel = 1;                                  // first pixel to write
+    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
+
+    // write the array of unsigned integers to the FITS file
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+        printerror( status );
+    }
+
+
+    if (fits_close_file(fptr, &status)) {
+        printerror( status );      
+    }       
+              
+    return;
+}
+
+
 /**
  * Given a tiff file and a log file, create a set of 
  * images for each neuron we are interested in.
@@ -148,7 +196,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
-    std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.tiff";
+    std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_asi.png";
 
     //image::SaveTiff(output_path, asi);
@@ -162,7 +210,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         image::Save(output_path_png, asi_flip);
 
     } else {
-        image::SaveTiff(output_path, asi);
+        // image::SaveTiff(output_path, asi);
+        WriteFITS(output_path, asi);
     } 
 
     // Now look at ASJ
@@ -175,7 +224,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     SetNeuron(image_in, asj, neurons, 3);
     SetNeuron(image_in, asj, neurons, 4);
 
-    output_path = options.output_path + "/" + options.prefix + image_id + "_asj.tiff";
+    output_path = options.output_path + "/" + options.prefix + image_id + "_asj.fits";
     output_path_png = options.output_path + "/" + options.prefix + image_id + "_asj.png";
 
     if (options.flatten){
@@ -187,7 +236,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         vkn::ImageU8L asj_flip = image::MirrorVertical(asj_flat);
         image::Save(output_path_png, asj_flip);
     } else {
-        image::SaveTiff(output_path, asj);
+        // image::SaveTiff(output_path, asj);
+        WriteFITS(output_path, asj);
     }
     image_idx +=1;
 

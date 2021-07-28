@@ -46,7 +46,6 @@ void printerror( int status) {
     return;
 }
 
-
 void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
