@@ -55,7 +55,7 @@ void printerror( int status) {
  * Look at one channel only though, top or bottom
  */
 void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
-std::vector<std::vector<size_t>> &neurons, int neuron_id) {
+    std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth) {
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
 
@@ -71,7 +71,11 @@ std::vector<std::vector<size_t>> &neurons, int neuron_id) {
                         neurons[neuron_id].end(), static_cast<size_t>(val));
                     if (it != neurons[neuron_id].end()) {
                         uint8_t nval = neuron_id;
-                        image_out.image_data[d][y][x] = val;
+                        if (flip_depth) {
+                            image_out.image_data[image_out.depth - d - 1][y][x] = val;
+                        } else {
+                            image_out.image_data[d][y][x] = val;
+                        }
                     } 
                 }
             }
@@ -185,8 +189,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     asi.height = image_in.height / asi.depth;
     vkn::Alloc(asi);
 
-    SetNeuron(image_in, asi, neurons, 1);
-    SetNeuron(image_in, asi, neurons, 2);
+    SetNeuron(image_in, asi, neurons, 1, !options.flatten);
+    SetNeuron(image_in, asi, neurons, 2, !options.flatten);
 
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
     std::string image_id = util::StringRemove(tokens_log[0], "ID");
@@ -221,8 +225,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     asj.height = asj.height = image_in.height / asj.depth;
     vkn::Alloc(asj);
 
-    SetNeuron(image_in, asj, neurons, 3);
-    SetNeuron(image_in, asj, neurons, 4);
+    SetNeuron(image_in, asj, neurons, 3, !options.flatten);
+    SetNeuron(image_in, asj, neurons, 4, !options.flatten);
 
     output_path = options.output_path + "/" + options.prefix + image_id + "_asj.fits";
     output_path_png = options.output_path + "/" + options.prefix + image_id + "_asj.png";
