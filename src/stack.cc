@@ -219,9 +219,17 @@ int main (int argc, char ** argv) {
     struct {
         bool operator()(std::string a, std::string b) const {
             std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
-            int ida = util::FromString<int>(util::StringRemove(tokens1[2], "0xAutoStack"));
+            int idx = 0;
+            for (std::string t : tokens1) {
+                if (util::StringContains(t, "AutoStack")) {
+                    break;
+                }
+                idx += 1;
+            }
+
+            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "0xAutoStack"));
             std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
-            int idb = util::FromString<int>(util::StringRemove(tokens2[2], "0xAutoStack"));
+            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "0xAutoStack"));
             return ida < idb;
         }
     } SortOrder;
