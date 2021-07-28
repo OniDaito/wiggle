@@ -114,7 +114,7 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     long  fpixel, nelements, exposure;
 
     // initialize FITS image parameters
-    int bitpix   =  BYTE_IMG; // 16-bit unsigned short pixel values
+    int bitpix   =  BYTE_IMG; // 8-bit unsigned short pixel values
     long naxis    =   3;        // 3D
     long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
 
@@ -133,7 +133,7 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
         printerror( status );
     }
 
@@ -322,9 +322,9 @@ int main (int argc, char ** argv) {
     // We use a sort based on the last ID number - keeps it inline with the flatten program
     struct {
         bool operator()(std::string a, std::string b) const {
-            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.");
+            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
             int ida = util::FromString<int>(util::StringRemove(tokens1[0], "ID"));
-            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.");
+            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
             int idb = util::FromString<int>(util::StringRemove(tokens2[0], "ID"));
             return ida < idb;
         }
@@ -335,11 +335,11 @@ int main (int argc, char ** argv) {
     // Pair up the tiffs with their log file and process them.
     for (std::string tiff : tiff_files) {
         bool paired = false;
-        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff), "_.");
+        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
-            std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.");
+            std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
                 std::cout << "Pairing " << tiff << " with " << log << std::endl;
                 paired = true;
