@@ -149,6 +149,30 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     return;
 }
 
+/**
+ * Return false if all elements are zero
+ *
+ * @param image - vkn::ImageU8L3D
+ *
+ * @return bool
+ */
+
+bool non_zero(vkn::ImageU8L3D &image) {
+
+    for (uint32_t d = 0; d < image.depth; d++) {
+        for (uint32_t y = 0; y < image.height; y++) {
+            for (uint32_t x = 0; x < image.width; x++) {
+                uint16_t val = image.image_data[d][y][x];
+       
+                if (val != 0) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 
 /**
  * Given a tiff file and a log file, create a set of 
@@ -203,22 +227,28 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_asi.png";
 
-    //image::SaveTiff(output_path, asi);
-    if (options.flatten){
-        vkn::ImageU8L asi_flat = Flatten(asi);
-        if (asi_flat.width != options.width || asi_flat.height != options.height) {
-            image::Resize(asi_flat, options.width, options.height);
-        }
-        //image::SaveTiff(output_path, asi_flat);
-        vkn::ImageU8L asi_flip = image::MirrorVertical(asi_flat);
-        image::Save(output_path_png, asi_flip);
+    if (non_zero(asi)) {
 
-    } else {
-        // image::SaveTiff(output_path, asi);
-        WriteFITS(output_path, asi);
-    } 
+        //image::SaveTiff(output_path, asi);
+        if (options.flatten){
+            vkn::ImageU8L asi_flat = Flatten(asi);
+            if (asi_flat.width != options.width || asi_flat.height != options.height) {
+                image::Resize(asi_flat, options.width, options.height);
+            }
+            //image::SaveTiff(output_path, asi_flat);
+            vkn::ImageU8L asi_flip = image::MirrorVertical(asi_flat);
+            image::Save(output_path_png, asi_flip);
+
+        } else {
+            // image::SaveTiff(output_path, asi);
+            WriteFITS(output_path, asi);
+        } 
+    }
+
+    
 
     // Now look at ASJ
+    
     vkn::ImageU8L3D asj;
     asj.width = image_in.width;
     asj.depth = options.image_slices;
@@ -231,17 +261,20 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     output_path = options.output_path + "/" + options.prefix + image_id + "_asj.fits";
     output_path_png = options.output_path + "/" + options.prefix + image_id + "_asj.png";
 
-    if (options.flatten){
-        vkn::ImageU8L asj_flat = Flatten(asj);
-        if (asj_flat.width != options.width || asj_flat.height != options.height) {
-            image::Resize(asj_flat, options.width, options.height);
+    if (non_zero(asj)) {
+
+        if (options.flatten){
+            vkn::ImageU8L asj_flat = Flatten(asj);
+            if (asj_flat.width != options.width || asj_flat.height != options.height) {
+                image::Resize(asj_flat, options.width, options.height);
+            }
+            //image::SaveTiff(output_path, asj_flat);
+            vkn::ImageU8L asj_flip = image::MirrorVertical(asj_flat);
+            image::Save(output_path_png, asj_flip);
+        } else {
+            // image::SaveTiff(output_path, asj);
+            WriteFITS(output_path, asj);
         }
-        //image::SaveTiff(output_path, asj_flat);
-        vkn::ImageU8L asj_flip = image::MirrorVertical(asj_flat);
-        image::Save(output_path_png, asj_flip);
-    } else {
-        // image::SaveTiff(output_path, asj);
-        WriteFITS(output_path, asj);
     }
     image_idx +=1;
 
