@@ -33,7 +33,7 @@ There are several options one can pass to both programs. An example run of datas
 
 and for flatten...
 
-    ./build/flatten -m -i /media/stuffProjects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./build/flatten -m -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
 ### Command line parameters
 

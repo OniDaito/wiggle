@@ -24,6 +24,13 @@ executable('dataset',
           include_directories : include_dirs,
           dependencies : [masamune, cfits])
 
+# multiset
+executable('multiset',
+          'src/multiset.cc',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [masamune, cfits])
+
 # flatten
 executable('flatten',
           'src/flatten.cc',
