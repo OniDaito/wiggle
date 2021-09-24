@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage ./create_dataset.sh <source> <dest>
+# Usage ./flatten.sh <source> <dest>
 
 # Flatten to get our mips
 touch flatten.log
