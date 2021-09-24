@@ -230,8 +230,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
-    std::string output_path = options.output_path + "/" + options.prefix + image_id + "_asi.fits";
-    std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_asi.png";
+    std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
+    std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
 
     if (non_zero(neuron_mask)) {
 
