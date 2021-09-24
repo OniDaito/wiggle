@@ -78,9 +78,9 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
                     if (it != neurons[neuron_id].end()) {
                         uint8_t nval = neuron_id;
                         if (flip_depth) {
-                            image_out.image_data[image_out.depth - d - 1][y][x] = val;
+                            image_out.image_data[image_out.depth - d - 1][y][x] = nval;
                         } else {
-                            image_out.image_data[d][y][x] = val;
+                            image_out.image_data[d][y][x] = nval;
                         }
                     } 
                 }
@@ -196,7 +196,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
-    // Read the log file and extract the     
+    // Read the log file and extract the neuron numbers
     for (int i = 0; i < 5; i++) {
         neurons.push_back(std::vector<size_t>());
     }
