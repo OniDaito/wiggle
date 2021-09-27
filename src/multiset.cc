@@ -242,8 +242,7 @@ bool non_zero(vkn::ImageU8L3D &image) {
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path) {
-    static int idx = 0;
+bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -275,7 +274,7 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
 
     if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        image_id  = util::IntToStringLeadingZeroes(image_idx, 5);
         output_path = options.output_path + "/" + image_id + "_layered.fits";
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
@@ -288,7 +287,6 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     }*/
 
     WriteFITS(output_path, stacked);
-    idx += 1;
     return true;
 }
 
@@ -609,7 +607,7 @@ int main (int argc, char ** argv) {
                             paired = true;
                             ProcessTiff(options, tiff_anno, log, image_idx);
                             std::cout << "Stacking: " << tiff_input << std::endl;
-                            TiffToFits(options, tiff_input);
+                            TiffToFits(options, tiff_input, image_idx);
                             image_idx += 1;
                             break;
                         } catch (const std::exception &e) {
