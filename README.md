@@ -29,7 +29,7 @@ The build commands are as follows:
 
 multiset
 
-    ./build/multiset -m -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./build/multiset -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
 
 ### Command line parameters
@@ -38,7 +38,6 @@ multiset
     -o The output image path
     -a The path to the annotation images
     -l The number of layers in Z
-    -m Perform a maximum intensity projection reduction
     -r Rename the images to a number with leading zeroes
     -n offset for the numbering of images
     -b Use the bottom channel, default is top channel
