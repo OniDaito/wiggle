@@ -431,7 +431,6 @@ std::vector<std::string> FindAnnotations(std::string annotation_path) {
     std::vector<std::string> tiff_anno_files;
 
     for (std::string filename : files_anno) {
-        std::cout << filename << std::endl;
         if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
             tiff_anno_files.push_back(filename);
         }
