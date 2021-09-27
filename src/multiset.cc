@@ -470,7 +470,6 @@ std::vector<std::string> FindAnnotations(std::string annotation_path) {
  * @return std::vector<std::string> a list of log files
  */
 
-
 std::vector<std::string> FindInputFiles(std::string image_path) {
     // Browse the directory looking for files
     std::vector<std::string> files_input = util::ListFiles(image_path);
@@ -577,7 +576,7 @@ int main (int argc, char ** argv) {
     std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
         << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
 
-    std::vector<std::string> tiff_input_files = FindInputFiles(options.annotation_path);
+    std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
