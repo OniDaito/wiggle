@@ -38,10 +38,13 @@ using namespace masamune;
 typedef struct {
     std::string image_path = ".";
     std::string output_path = ".";
+    std::string annotation_path = ".";
     std::string prefix = "";
     bool flatten = false;
     bool rename = false;
     int offset_number = 0;
+    bool bottom = false;
+    int channels = 2; // 2 Channels initially in these images
     int image_slices = 51; // number of z-slices
     int width = 640; // The desired dimensions
     int height = 300;
@@ -117,6 +120,58 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
 }
 
 
+void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
+    fitsfile *fptr; 
+    int status, ii, jj;
+    long  fpixel, nelements, exposure;
+
+    // initialize FITS image parameters
+    int bitpix   =  USHORT_IMG; // 16-bit unsigned short pixel values
+    long naxis    =   3;        // 3D
+    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
+
+    remove(filename.c_str());   // Delete old file if it already exists
+    status = 0;                 // initialize status before calling fitsio routines
+
+    if (fits_create_file(&fptr, filename.c_str(), &status)) {
+         printerror( status );
+    } 
+
+    /* write the required keywords for the primary array image.     */
+    /* Since bitpix = USHORT_IMG, this will cause cfitsio to create */
+    /* a FITS image with BITPIX = 16 (signed short integers) with   */
+    /* BSCALE = 1.0 and BZERO = 32768.  This is the convention that */
+    /* FITS uses to store unsigned integers.  Note that the BSCALE  */
+    /* and BZERO keywords will be automatically written by cfitsio  */
+    /* in this case.                                                */
+
+    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
+        printerror( status ); 
+    }
+                  
+    fpixel = 1;                                  // first pixel to write
+    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
+
+    // write the array of unsigned integers to the FITS file
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+        printerror( status );
+    }
+
+    /* write another optional keyword to the header */
+    /* Note that the ADDRESS of the value is passed in the routine */
+    /* exposure = 1500;
+    if ( fits_update_key(fptr, TLONG, "EXPOSURE", &exposure,
+         "Total Exposure Time", &status) )
+         printerror( status );           */
+
+    if (fits_close_file(fptr, &status)) {
+        printerror( status );      
+    }       
+              
+    return;
+}
+
+
 void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
@@ -177,6 +232,65 @@ bool non_zero(vkn::ImageU8L3D &image) {
     return false;
 }
 
+/**
+ * Given a tiff file return the same file but with one channel and 
+ * as a series of layers
+ * 
+ * @param options - the options struct
+ * @param tiff_path - the file path to the tiff
+ *
+ * @return bool if success or not
+ */
+
+bool TiffToFits(Options &options, std::string &tiff_path) {
+    static int idx = 0;
+    vkn::ImageU16L image;
+    vkn::ImageU16L3D stacked;
+    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
+    stacked.width = image.width;
+    stacked.depth = options.image_slices;
+    stacked.height = image.height / (stacked.depth * options.channels); // Two channels
+    vkn::Alloc(stacked);
+    uint coff = 0;
+
+    if (options.bottom) {
+        coff = stacked.height;
+    }
+
+    for (uint32_t d = 0; d < stacked.depth; d++) {
+
+        for (uint32_t y = 0; y < stacked.height; y++) {
+
+            // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
+            for (uint32_t x = 0; x < stacked.width; x++) {
+                uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
+                stacked.image_data[d][stacked.height - y - 1][x] = val;
+            }
+        }
+    }
+
+    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::string image_id = tokens_log[3];
+    image_id = util::StringRemove(image_id, "0xAutoStack");
+    std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
+
+    if (options.rename == true) {
+        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        output_path = options.output_path + "/" + image_id + "_layered.fits";
+        std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
+    }
+
+    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
+    // image::SaveTiff(output_path, flattened);
+    /*if (flattened.width != options.width || flattened.height != options.height) {
+        std::cout << "Resizing " << output_path << std::endl;
+        image::Resize(flattened, options.width, options.height);
+    }*/
+
+    WriteFITS(output_path, stacked);
+    idx += 1;
+    return true;
+}
 
 /**
  * Given a tiff file and a log file, create a set of 
@@ -276,6 +390,9 @@ int main (int argc, char ** argv) {
             case 'i' :
                 options.image_path = std::string(optarg);
                 break;
+            case 'a' :
+                options.annotation_path = std::string(optarg);
+                break;
             case 'o' :
                 options.output_path = std::string(optarg);
                 break;
@@ -309,16 +426,17 @@ int main (int argc, char ** argv) {
     std::cout << "Loading images from " << options.image_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
 
-    // Browse the directory looking for files
-    std::vector<std::string> files = util::ListFiles(options.image_path);
-    std::vector<std::string> tiff_files;
+    // First, hunt for the log files
+
+    std::vector<std::string> files_anno = util::ListFiles(options.annotation_path);
+    std::vector<std::string> tiff_anno_files;
     std::vector<std::string> log_files;
     std::vector<std::string> dat_files;
 
-    for (std::string filename : files) {
+    for (std::string filename : files_anno) {
         std::cout << filename << std::endl;
         if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
-            tiff_files.push_back(filename);
+            tiff_anno_files.push_back(filename);
         }
         else if (util::StringContains(filename, ".dat")) {
             dat_files.push_back(filename);
@@ -347,31 +465,94 @@ int main (int argc, char ** argv) {
             int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "ID"));
             return ida < idb;
         }
-    } SortOrder;
+    } SortOrderAnno;
 
-    std::sort(tiff_files.begin(), tiff_files.end(), SortOrder);
+    std::sort(tiff_anno_files.begin(), tiff_anno_files.end(), SortOrderAnno);
 
-    // Pair up the tiffs with their log file and process them.
-    for (std::string tiff : tiff_files) {
+    // Now hunt for the input tiff files
+
+    std::cout << "Loading images from " << options.image_path << std::endl;
+
+    std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
+        << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
+    // Browse the directory looking for files
+    std::vector<std::string> files_input = util::ListFiles(options.image_path);
+    std::vector<std::string> tiff_input_files;
+
+    for (std::string filename : files_input) {
+        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "AutoStack")) {
+            tiff_input_files.push_back(filename);
+        }
+    }
+
+    // We use a sort based on the last ID number - keeps it inline with the flatten program
+    struct {
+        bool operator()(std::string a, std::string b) const {
+            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
+            int idx = 0;
+            for (std::string t : tokens1) {
+                if (util::StringContains(t, "AutoStack")) {
+                    break;
+                }
+                idx += 1;
+            }
+
+            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "0xAutoStack"));
+            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
+            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "0xAutoStack"));
+            return ida < idb;
+        }
+    } SortOrderInput;
+
+    std::sort(tiff_input_files.begin(), tiff_input_files.end(), SortOrderInput);
+
+    // Pair up the tiffs with their log file and then the input and process them.
+    for (std::string tiff_anno : tiff_anno_files) {
         bool paired = false;
-        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff), "_.-");
+        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
             std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
-                std::cout << "Pairing " << tiff << " with " << log << std::endl;
-                paired = true;
-                ProcessTiff(options, tiff, log, image_idx);
+                
+                for (std::string tiff_input : tiff_input_files) {
+
+                    // Find the matching input stack
+                    std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(tiff_input), "_.-");
+                    int tidx = 0;
+                    for (std::string t : tokens1) {
+                        if (util::StringContains(t, "AutoStack")) {
+                            break;
+                        }
+                        tidx += 1;
+                    }
+                    
+                    int ida = util::FromString<int>(util::StringRemove(tokens1[tidx], "0xAutoStack"));
+
+                    if (ida == util::FromString<int>(id)) {
+                        try {
+                            std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
+                            paired = true;
+                            ProcessTiff(options, tiff_anno, log, image_idx);
+                            std::cout << "Flattening: " << tiff_input << std::endl;
+                            TiffToFits(options, tiff_input);
+                            image_idx += 1;
+                            break;
+                        } catch (const std::exception &e) {
+                             std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
+                        }
+                    }
+                }
+
             }
         }
 
         if (!paired){
-            std::cout << "Failed to pair " << tiff << std::endl;
+            std::cout << "Failed to pair " << tiff_anno << std::endl;
         }
-        // We always move image_idx on by one. This way, we end up with non-contiguous numbers, but the 
-        // numbers will match the images output by the mips program.
-        image_idx += 1;
+    
+        
     }
 
     return EXIT_SUCCESS;
