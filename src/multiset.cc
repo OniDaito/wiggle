@@ -626,8 +626,6 @@ int main (int argc, char ** argv) {
         if (!paired){
             std::cout << "Failed to pair " << tiff_anno << std::endl;
         }
-    
-        
     }
 
     return EXIT_SUCCESS;
