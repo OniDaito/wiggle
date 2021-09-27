@@ -383,7 +383,7 @@ int main (int argc, char ** argv) {
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:p:frn:zw:h:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:zw:h:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
