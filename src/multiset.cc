@@ -405,6 +405,9 @@ int main (int argc, char ** argv) {
             case 'r' :
                 options.rename = true;
                 break;
+            case 'b':
+                options.bottom = true;
+                break;
             case 'n':
                 options.offset_number = util::FromString<int>(optarg);
                 break;

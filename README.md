@@ -27,33 +27,21 @@ The build commands are as follows:
 
 ## Running
 
-There are several options one can pass to both programs. An example run of dataset might be...
+multiset
 
-    ./build/dataset -f -r -i /media/stuff/Projects/wormz/queelim/Solange_analysis/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./build/multiset -m -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
-and for flatten...
-
-    ./build/flatten -m -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
 ### Command line parameters
 
-#### flatten
-
     -i The input image path
     -o The output image path
+    -a The path to the annotation images
     -l The number of layers in Z
     -m Perform a maximum intensity projection reduction
     -r Rename the images to a number with leading zeroes
     -n offset for the numbering of images
     -b Use the bottom channel, default is top channel
     -w New width to resize
-    -h New height to resize 
-
-#### Dataset
-
-    -f flatten the resulting images rather than having 3D tiffs
-    -i path to the input files directory
-    -o path to the output files directory
-    -n offset for numbering the output files
-    -r rename files with numbers as oppose to keeping the original name
+    -h New height to resize
     -b use the bottom instead of the top channel
