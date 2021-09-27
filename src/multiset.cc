@@ -370,82 +370,73 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     return true;
 }
 
-int main (int argc, char ** argv) {
-    // Parse command line options
-    Options options;
-    int c;
-    static struct option long_options[] = {
-        {"image-path", 1, 0, 0},
-        {"output-path", 1, 0, 0},
-        {"prefix", 1, 0, 0},
-        {NULL, 0, NULL, 0}
-    };
 
-    int option_index = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:zw:h:?", long_options, &option_index)) != -1) {
-        switch (c) {
-            case 0 :
-                break;
-            case 'i' :
-                options.image_path = std::string(optarg);
-                break;
-            case 'a' :
-                options.annotation_path = std::string(optarg);
-                break;
-            case 'o' :
-                options.output_path = std::string(optarg);
-                break;
-            case 'p' :
-                options.prefix = std::string(optarg);
-                break;
-            case 'f' :
-                options.flatten = true;
-                break;
-            case 'r' :
-                options.rename = true;
-                break;
-            case 'b':
-                options.bottom = true;
-                break;
-            case 'n':
-                options.offset_number = util::FromString<int>(optarg);
-                break;
-            case 'z':
-                options.image_slices = util::FromString<int>(optarg);
-                break;
-            case 'w':
-                options.width = util::FromString<int>(optarg);
-                break;
-            case 'h':
-                options.height = util::FromString<int>(optarg);
-                break;
+/**
+ * Given a path to the output, return the index for the next
+ * run.
+ *
+ * @param image_path - the output path
+ *
+ * @return std::vector<std::string> a list of log files
+ */
+
+int GetOffetNumber(std::string output_path) {
+    std::vector<std::string> files = util::ListFiles(output_path);
+    int count  = 0;
+
+    for (std::string filename : files) {
+        std::cout << filename << std::endl;
+        if (util::StringContains(filename, "layered")) {
+            count += 1;
         }
     }
 
-    int image_idx = options.offset_number;
-   
-    //return EXIT_FAILURE;
-    std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
-    std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
+    return count;
+}
 
-    // First, hunt for the log files
 
-    std::vector<std::string> files_anno = util::ListFiles(options.annotation_path);
-    std::vector<std::string> tiff_anno_files;
+/**
+ * Given a path to the annotations directory find the log files
+ * that hold the data we need.
+ *
+ * @param annotation_path - the file path to the annotations
+ *
+ * @return std::vector<std::string> a list of log files
+ */
+
+std::vector<std::string> FindLogFiles(std::string annotation_path) {
     std::vector<std::string> log_files;
-    std::vector<std::string> dat_files;
+    std::vector<std::string> files_anno = util::ListFiles(annotation_path);
+
+    for (std::string filename : files_anno) {
+        std::cout << filename << std::endl;
+        if (util::StringContains(filename, ".log")) {
+            log_files.push_back(filename);
+        }
+    }
+
+    return log_files;
+}
+
+
+/**
+ * Given a path to the annotations directory find the tiff 
+ * images with the watershedded categories.
+ *
+ * @param annotation_path - the file path to the annotations
+ *
+ * @return std::vector<std::string> a list of tiff files
+ */
+
+std::vector<std::string> FindAnnotations(std::string annotation_path) {
+    std::vector<std::string> files_anno = util::ListFiles(annotation_path);
+    std::vector<std::string> tiff_anno_files;
 
     for (std::string filename : files_anno) {
         std::cout << filename << std::endl;
         if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
             tiff_anno_files.push_back(filename);
-        }
-        else if (util::StringContains(filename, ".dat")) {
-            dat_files.push_back(filename);
-        }
-        else if (util::StringContains(filename, ".log")) {
-            log_files.push_back(filename);
         }
     }
 
@@ -471,14 +462,22 @@ int main (int argc, char ** argv) {
     } SortOrderAnno;
 
     std::sort(tiff_anno_files.begin(), tiff_anno_files.end(), SortOrderAnno);
+    return tiff_anno_files;
+}
 
-    // Now hunt for the input tiff files
+/**
+ * Given a path to the raw input directory find the tiff images
+ * that hold the data we need.
+ *
+ * @param image - the file path to the raw input data
+ *
+ * @return std::vector<std::string> a list of log files
+ */
 
-    std::cout << "Loading input images from " << options.image_path << std::endl;
-    std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
-        << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
+
+std::vector<std::string> FindInputFiles(std::string image_path) {
     // Browse the directory looking for files
-    std::vector<std::string> files_input = util::ListFiles(options.image_path);
+    std::vector<std::string> files_input = util::ListFiles(image_path);
     std::vector<std::string> tiff_input_files;
 
     for (std::string filename : files_input) {
@@ -507,6 +506,82 @@ int main (int argc, char ** argv) {
     } SortOrderInput;
 
     std::sort(tiff_input_files.begin(), tiff_input_files.end(), SortOrderInput);
+    return tiff_input_files;
+}
+
+
+int main (int argc, char ** argv) {
+    // Parse command line options
+    Options options;
+    int c;
+    static struct option long_options[] = {
+        {"image-path", 1, 0, 0},
+        {"output-path", 1, 0, 0},
+        {"prefix", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+
+    int option_index = 0;
+    int image_idx = 0;
+
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:zw:h:?", long_options, &option_index)) != -1) {
+        switch (c) {
+            case 0 :
+                break;
+            case 'i' :
+                options.image_path = std::string(optarg);
+                break;
+            case 'a' :
+                options.annotation_path = std::string(optarg);
+                break;
+            case 'o' :
+                options.output_path = std::string(optarg);
+                image_idx = GetOffetNumber(options.output_path);
+                break;
+            case 'p' :
+                options.prefix = std::string(optarg);
+                break;
+            case 'f' :
+                options.flatten = true;
+                break;
+            case 'r' :
+                options.rename = true;
+                break;
+            case 'b':
+                options.bottom = true;
+                break;
+            case 'n':
+                options.offset_number = util::FromString<int>(optarg);
+                image_idx = options.offset_number;
+                break;
+            case 'z':
+                options.image_slices = util::FromString<int>(optarg);
+                break;
+            case 'w':
+                options.width = util::FromString<int>(optarg);
+                break;
+            case 'h':
+                options.height = util::FromString<int>(optarg);
+                break;
+        }
+    }
+
+    //return EXIT_FAILURE;
+    std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
+    std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
+
+    // First, find and sort the annotation files
+    std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
+
+    // Next, find the annotation log files
+    std::vector<std::string> log_files = FindLogFiles(options.annotation_path);
+
+    // Now find the input files
+    std::cout << "Loading input images from " << options.image_path << std::endl;
+    std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
+        << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
+
+    std::vector<std::string> tiff_input_files = FindInputFiles(options.annotation_path);
 
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
@@ -538,7 +613,7 @@ int main (int argc, char ** argv) {
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
                             paired = true;
                             ProcessTiff(options, tiff_anno, log, image_idx);
-                            std::cout << "Flattening: " << tiff_input << std::endl;
+                            std::cout << "Stacking: " << tiff_input << std::endl;
                             TiffToFits(options, tiff_input);
                             image_idx += 1;
                             break;
