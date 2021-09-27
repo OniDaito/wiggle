@@ -371,7 +371,6 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 }
 
 
-
 /**
  * Given a path to the output, return the index for the next
  * run.
@@ -386,7 +385,6 @@ int GetOffetNumber(std::string output_path) {
     int count  = 0;
 
     for (std::string filename : files) {
-        std::cout << filename << std::endl;
         if (util::StringContains(filename, "layered")) {
             count += 1;
         }
@@ -410,7 +408,6 @@ std::vector<std::string> FindLogFiles(std::string annotation_path) {
     std::vector<std::string> files_anno = util::ListFiles(annotation_path);
 
     for (std::string filename : files_anno) {
-        std::cout << filename << std::endl;
         if (util::StringContains(filename, ".log")) {
             log_files.push_back(filename);
         }
