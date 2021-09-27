@@ -426,7 +426,7 @@ int main (int argc, char ** argv) {
     int image_idx = options.offset_number;
    
     //return EXIT_FAILURE;
-    std::cout << "Loading images from " << options.image_path << std::endl;
+    std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
 
     // First, hunt for the log files
@@ -474,8 +474,7 @@ int main (int argc, char ** argv) {
 
     // Now hunt for the input tiff files
 
-    std::cout << "Loading images from " << options.image_path << std::endl;
-
+    std::cout << "Loading input images from " << options.image_path << std::endl;
     std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
         << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
     // Browse the directory looking for files
@@ -488,7 +487,7 @@ int main (int argc, char ** argv) {
         }
     }
 
-    // We use a sort based on the last ID number - keeps it inline with the flatten program
+    // We use a sort based on the last ID number - keeps it inline with the sort above
     struct {
         bool operator()(std::string a, std::string b) const {
             std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
@@ -520,10 +519,10 @@ int main (int argc, char ** argv) {
             if (tokens_log[0] == id) {
                 
                 for (std::string tiff_input : tiff_input_files) {
-
                     // Find the matching input stack
                     std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(tiff_input), "_.-");
                     int tidx = 0;
+
                     for (std::string t : tokens1) {
                         if (util::StringContains(t, "AutoStack")) {
                             break;
@@ -532,6 +531,8 @@ int main (int argc, char ** argv) {
                     }
                     
                     int ida = util::FromString<int>(util::StringRemove(tokens1[tidx], "0xAutoStack"));
+
+                    std::cout << ida << ", " << id << std::endl;
 
                     if (ida == util::FromString<int>(id)) {
                         try {
