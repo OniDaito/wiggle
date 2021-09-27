@@ -603,8 +603,6 @@ int main (int argc, char ** argv) {
                     int ida = util::FromString<int>(util::StringRemove(tokens1[tidx], "0xAutoStack"));
                     int idb = util::FromString<int>(util::StringRemove(id, "ID"));
 
-                    std::cout << ida << ", " << idb << std::endl;
-
                     if (ida == idb) {
                         try {
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;

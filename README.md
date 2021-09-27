@@ -25,6 +25,11 @@ The build commands are as follows:
     meson setup build
     ninja -C build
 
+For a faster release build:
+
+    meson setup --buildtype release release
+    ninja -C release
+
 ## Running
 
 multiset
