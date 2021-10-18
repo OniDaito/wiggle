@@ -569,6 +569,7 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
+    std::cout << "Output Size Width: " << options.width << ", Height: " << options.height << ", Depth: " << options.depth << std::endl;
 
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
