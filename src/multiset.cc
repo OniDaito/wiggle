@@ -293,7 +293,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
     } else {
         WriteFITS(output_path, stacked);
     }
-    
+
     return true;
 }
 
@@ -524,7 +524,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:zw:h:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
