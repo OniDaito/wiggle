@@ -45,7 +45,7 @@ typedef struct {
     int offset_number = 0;
     bool bottom = false;
     int channels = 2; // 2 Channels initially in these images
-    int image_slices = 51; // number of z-slices
+    int depth = 51; // number of z-slices - TODO - should be set automatically along with width and height
     int width = 640; // The desired dimensions
     int height = 300;
 } Options;
@@ -247,7 +247,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
     stacked.width = image.width;
-    stacked.depth = options.image_slices;
+    stacked.depth = options.depth;
     stacked.height = image.height / (stacked.depth * options.channels); // Two channels
     vkn::Alloc(stacked);
     uint coff = 0;
@@ -286,7 +286,14 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
         image::Resize(flattened, options.width, options.height);
     }*/
 
-    WriteFITS(output_path, stacked);
+    // Perform a resize with nearest neighbour sampling if we have different sizes.
+    if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
+        vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
+        WriteFITS(output_path, resized);
+    } else {
+        WriteFITS(output_path, stacked);
+    }
+    
     return true;
 }
 
@@ -325,7 +332,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     // Join all our neurons
     vkn::ImageU8L3D neuron_mask;
     neuron_mask.width = image_in.width;
-    neuron_mask.depth = options.image_slices;
+    neuron_mask.depth = options.depth;
     neuron_mask.height = image_in.height / neuron_mask.depth;
     vkn::Alloc(neuron_mask);
 
@@ -548,7 +555,7 @@ int main (int argc, char ** argv) {
                 image_idx = options.offset_number;
                 break;
             case 'z':
-                options.image_slices = util::FromString<int>(optarg);
+                options.depth = util::FromString<int>(optarg);
                 break;
             case 'w':
                 options.width = util::FromString<int>(optarg);
@@ -572,7 +579,7 @@ int main (int argc, char ** argv) {
     // Now find the input files
     std::cout << "Loading input images from " << options.image_path << std::endl;
     std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
-        << " height: " << options.height << " Z layers: " << options.image_slices << std::endl;
+        << " height: " << options.height << " Z layers: " << options.depth << std::endl;
 
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 

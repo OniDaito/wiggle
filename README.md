@@ -48,4 +48,5 @@ multiset
     -b Use the bottom channel, default is top channel
     -w New width to resize
     -h New height to resize
+    -z New depth to resize
     -b use the bottom instead of the top channel
