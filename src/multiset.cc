@@ -367,7 +367,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         } else {
             // image::SaveTiff(output_path, asi);
             if (neuron_mask.width != options.width || neuron_mask.height != options.height  || neuron_mask.depth != options.depth) {
-                 vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height);
+                 vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
                  WriteFITS(output_path, resized);
             } else {
                 WriteFITS(output_path, neuron_mask);
