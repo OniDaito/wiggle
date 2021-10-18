@@ -366,12 +366,16 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
         } else {
             // image::SaveTiff(output_path, asi);
-            WriteFITS(output_path, neuron_mask);
+            if (neuron_mask.width != options.width || neuron_mask.height != options.height  || neuron_mask.depth != options.depth) {
+                 vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height);
+                 WriteFITS(output_path, resized);
+            } else {
+                WriteFITS(output_path, neuron_mask);
+            }
         } 
     }
 
     image_idx +=1;
-
     return true;
 }
 
@@ -579,8 +583,7 @@ int main (int argc, char ** argv) {
 
     // Now find the input files
     std::cout << "Loading input images from " << options.image_path << std::endl;
-    std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
-        << " height: " << options.height << " Z layers: " << options.depth << std::endl;
+    std::cout << "Options: bottom: " << options.bottom << std::endl;
 
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 
