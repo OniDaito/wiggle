@@ -48,6 +48,7 @@ typedef struct {
     int depth = 51; // number of z-slices - TODO - should be set automatically along with width and height
     int width = 640; // The desired dimensions
     int height = 300;
+    int stacksize = 51; // How many stacks in our input 2D image
 } Options;
 
 
@@ -247,7 +248,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
     stacked.width = image.width;
-    stacked.depth = options.depth;
+    stacked.depth = options.stacksize;
     stacked.height = image.height / (stacked.depth * options.channels); // Two channels
     vkn::Alloc(stacked);
     uint coff = 0;
@@ -332,7 +333,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     // Join all our neurons
     vkn::ImageU8L3D neuron_mask;
     neuron_mask.width = image_in.width;
-    neuron_mask.depth = options.depth;
+    neuron_mask.depth = options.stacksize;
     neuron_mask.height = image_in.height / neuron_mask.depth;
     vkn::Alloc(neuron_mask);
 
@@ -366,7 +367,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
         } else {
             // image::SaveTiff(output_path, asi);
-            if (neuron_mask.width != options.width || neuron_mask.height != options.height  || neuron_mask.depth != options.depth) {
+            if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
                  vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
                  WriteFITS(output_path, resized);
             } else {
@@ -528,7 +529,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:s:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -567,6 +568,9 @@ int main (int argc, char ** argv) {
             case 'h':
                 options.height = util::FromString<int>(optarg);
                 break;
+            case 's':
+                options.stacksize = util::FromString<int>(optarg);
+                break;
         }
     }
 
@@ -583,7 +587,7 @@ int main (int argc, char ** argv) {
 
     // Now find the input files
     std::cout << "Loading input images from " << options.image_path << std::endl;
-    std::cout << "Options: bottom: " << options.bottom << std::endl;
+    std::cout << "Options: bottom: " << options.bottom << ", Stacksize:" << options.stacksize << std::endl;
 
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 
