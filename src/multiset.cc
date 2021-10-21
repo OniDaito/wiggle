@@ -537,7 +537,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:s:t?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbn:z:w:h:s:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
