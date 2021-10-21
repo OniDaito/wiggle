@@ -42,6 +42,7 @@ typedef struct {
     std::string prefix = "";
     bool flatten = false;
     bool rename = false;
+    bool threeclass = false; // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
     int channels = 2; // 2 Channels initially in these images
@@ -65,7 +66,7 @@ void printerror( int status) {
  * Look at one channel only though, top or bottom
  */
 void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
-    std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth) {
+    std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write) {
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
 
@@ -80,7 +81,7 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
                     std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
                         neurons[neuron_id].end(), static_cast<size_t>(val));
                     if (it != neurons[neuron_id].end()) {
-                        uint8_t nval = neuron_id;
+                        uint8_t nval = id_to_write;
                         if (flip_depth) {
                             image_out.image_data[image_out.depth - d - 1][y][x] = nval;
                         } else {
@@ -337,10 +338,17 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     neuron_mask.height = image_in.height / neuron_mask.depth;
     vkn::Alloc(neuron_mask);
 
-    SetNeuron(image_in, neuron_mask, neurons, 1, !options.flatten);
-    SetNeuron(image_in, neuron_mask, neurons, 2, !options.flatten);
-    SetNeuron(image_in, neuron_mask, neurons, 3, !options.flatten);
-    SetNeuron(image_in, neuron_mask, neurons, 4, !options.flatten);
+    if (options.threeclass) {
+        SetNeuron(image_in, neuron_mask, neurons, 1, !options.flatten, 1);
+        SetNeuron(image_in, neuron_mask, neurons, 2, !options.flatten, 1);
+        SetNeuron(image_in, neuron_mask, neurons, 3, !options.flatten, 2);
+        SetNeuron(image_in, neuron_mask, neurons, 4, !options.flatten, 2);
+    } else {
+        SetNeuron(image_in, neuron_mask, neurons, 1, !options.flatten, 1);
+        SetNeuron(image_in, neuron_mask, neurons, 2, !options.flatten, 2);
+        SetNeuron(image_in, neuron_mask, neurons, 3, !options.flatten, 3);
+        SetNeuron(image_in, neuron_mask, neurons, 4, !options.flatten, 4);
+    }
 
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
     std::string image_id = util::StringRemove(tokens_log[0], "ID");
@@ -529,7 +537,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:s:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frbn:z:w:h:s:t?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -554,6 +562,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'b':
                 options.bottom = true;
+                break;
+            case 't' :
+                options.threeclass = true;
                 break;
             case 'n':
                 options.offset_number = util::FromString<int>(optarg);
