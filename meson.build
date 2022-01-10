@@ -45,6 +45,11 @@ executable('stack',
           include_directories : include_dirs,
           dependencies : [masamune, cfits])
 
+executable('fluro',
+          'src/fluro.cc',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [masamune])
 
 # Tests
 e = executable('test_basic',
