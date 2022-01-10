@@ -36,8 +36,13 @@ multiset
 
     ./build/multiset -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
 
+Counting the flourescence from a saved log file from multiset, repl.acing the /media/proto_backup/wormz/queelim with /phd/wormz/queelim so we get the paths to the dat files right (optional)
+
+    ./fluro -i /media/proto_backup/wormz/queelim/dataset_21_10_2021/dataset.log -p /media/proto_backup/wormz/queelim -m /phd/wormz/queelim > //media/proto_backup/wormz/queelim/dataset_21_10_2021/fluoro.csv
 
 ### Command line parameters
+
+For multiset
 
     -i The input image path
     -o The output image path
