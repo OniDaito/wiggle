@@ -32,13 +32,14 @@ typedef struct {
 
 
 /**
- * Given a tiff file and a log file, create a set of 
- * images for each neuron we are interested in.
- * 
- * @param options - the options struct
- * @param log_path - the file path to the corresponding .dat file
+ * Given the output log file from multiset, create a CSV of matching
+ * Fluorescence values
  *
- * @return bool if success or not
+ * @param log_path - the file path to the corresponding .dat file
+ * @param replace - the bit of the image paths to replace
+ * @param prefix - what to replace with.
+ *
+ * @return None
  */
 
 void ProcessLog(std::string &log_path, std::string &replace, std::string &prefix) {
