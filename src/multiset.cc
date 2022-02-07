@@ -23,14 +23,8 @@
  *
  */
 
-#include <getopt.h>
-#include <fitsio.h>
-#include <masamune/masamune_prog.h>
-#include <masamune/util/string.h>
-#include <masamune/util/file.h>
-#include <masamune/image/tiff.h>
-#include <masamune/image/basic.h>
-#include <vector>
+
+#include "multiset.h"
 
 using namespace masamune;
 
@@ -42,16 +36,19 @@ typedef struct {
     std::string prefix = "";
     bool flatten = false;
     bool rename = false;
-    bool threeclass = false; // Forget 1 and 2 and just go with ASI, ASJ or background.
+    bool crop = false;          // Crop the image to an ROI.
+    bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
-    int channels = 2; // 2 Channels initially in these images
-    int depth = 51; // number of z-slices - TODO - should be set automatically along with width and height
-    int width = 640; // The desired dimensions
+    int channels = 2;           // 2 Channels initially in these images
+    int depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
+    int width = 640;            // The desired dimensions
     int height = 300;
-    int stacksize = 51; // How many stacks in our input 2D image
+    int stacksize = 51;         // How many stacks in our input 2D image
+    int roi_width = 128;
+    int roi_height = 128;
+    int roi_depth = 25; 
 } Options;
-
 
 void printerror( int status) {
     if (status) {
@@ -60,6 +57,7 @@ void printerror( int status) {
     }
     return;
 }
+
 
 /**
  * Check the area id against the neuron list, setting it to what it claims to be.
@@ -244,7 +242,7 @@ bool non_zero(vkn::ImageU8L3D &image) {
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
+bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -291,7 +289,16 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
         vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
-        WriteFITS(output_path, resized);
+        if (options.crop) {
+            ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
+            roi.x = roi_found.x;
+            roi.y = roi_found.y;
+            roi.z = roi_found.z;
+            vkn::ImageU16L3D cropped = image::Crop(resized, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+            WriteFITS(output_path, cropped);
+        } else {
+            WriteFITS(output_path, resized);
+        }
     } else {
         WriteFITS(output_path, stacked);
     }
@@ -310,7 +317,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx) {
  * @return bool if success or not
  */
 
-bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
+bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
     vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
@@ -362,7 +369,6 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
 
     if (non_zero(neuron_mask)) {
-
         //image::SaveTiff(output_path, asi);
         if (options.flatten){
             vkn::ImageU8L neuron_mask_flat = Flatten(neuron_mask);
@@ -376,8 +382,13 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         } else {
             // image::SaveTiff(output_path, asi);
             if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
-                 vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
-                 WriteFITS(output_path, resized);
+                vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
+                if (options.crop) {
+                    vkn::ImageU8L3D cropped = image::Crop(resized, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+                    WriteFITS(output_path, cropped);
+                } else {
+                    WriteFITS(output_path, resized);
+                }
             } else {
                 WriteFITS(output_path, neuron_mask);
             }
@@ -537,7 +548,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbn:z:w:h:s:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -566,6 +577,9 @@ int main (int argc, char ** argv) {
             case 't' :
                 options.threeclass = true;
                 break;
+            case 'c' :
+                options.crop = true;
+                break;
             case 'n':
                 options.offset_number = util::FromString<int>(optarg);
                 image_idx = options.offset_number;
@@ -581,6 +595,15 @@ int main (int argc, char ** argv) {
                 break;
             case 's':
                 options.stacksize = util::FromString<int>(optarg);
+                break;
+            case 'j':
+                options.roi_width = util::FromString<int>(optarg);
+                break;
+            case 'k':
+                options.roi_height = util::FromString<int>(optarg);
+                break;
+            case 'l':
+                options.roi_depth = util::FromString<int>(optarg);
                 break;
         }
     }
@@ -629,11 +652,12 @@ int main (int argc, char ** argv) {
 
                     if (ida == idb) {
                         try {
+                            ROI roi;
+                            std::cout << "Stacking: " << tiff_input << std::endl;
+                            TiffToFits(options, tiff_input, image_idx, roi);
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
                             paired = true;
-                            ProcessTiff(options, tiff_anno, log, image_idx);
-                            std::cout << "Stacking: " << tiff_input << std::endl;
-                            TiffToFits(options, tiff_input, image_idx);
+                            ProcessTiff(options, tiff_anno, log, image_idx, roi);
                             image_idx += 1;
                             break;
                         } catch (const std::exception &e) {

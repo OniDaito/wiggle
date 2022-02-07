@@ -26,6 +26,7 @@ executable('dataset',
 
 # multiset
 executable('multiset',
+          'src/roi.cc',
           'src/multiset.cc',
           install : false,
           include_directories : include_dirs,
@@ -52,8 +53,16 @@ executable('fluro',
           dependencies : [masamune])
 
 # Tests
-e = executable('test_basic',
+test_basic = executable('test_basic',
   'src/test/basic.cc',
   include_directories : include_dirs,
   dependencies : [masamune, cfits])
-test('Basic Test', e)
+
+test_roi = executable('test_roi',
+  'src/roi.cc',
+  'src/test/roi.cc',
+  include_directories : include_dirs,
+  dependencies : [masamune, cfits])
+
+test('Basic Test', test_basic)
+#test('ROI Test', test_roi)
