@@ -56,32 +56,11 @@ typedef struct {
     int x;
     int y;
     int z;
-} aug;
+} Aug;
 
 
 // A fixed set of augmentation directions
-std::vector<aug> AUGS = {
-    {0, 0, 0},
-    {1, -1, 0},
-    {-4, 1, 0},
-    {4, 4, 0},
-    {-2, 1, 0},
-    {-1, 3, 0},
-    {1, 3, 0},
-    {2, 2, 0},
-    {2, -1, 0},
-    {-1, -1, 0},
-    {-3, -2, 0},
-    {-1, 1, 0},
-    {4, -1, 0},
-    {-4, -4, 0},
-    {2, -1, 0},
-    {1, -3, 0},
-    {-1, -3, 0},
-    {-2, -2, 0},
-    {-2, 1, 0},
-    {1, 1, 0},
-};
+std::vector<Aug> AUGS;
 
 void printerror( int status) {
     if (status) {
@@ -323,14 +302,26 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
         vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
         if (options.crop) {
+            AUGS.clear();
+
+            // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
+            // that comes later as the mask must match
             for (int i = 0; i < options.num_rois; i++){
-                std::string aug = util::IntToStringLeadingZeroes(i, 2);
-                output_path = options.output_path + "/" + image_id + "_" + aug + "_layered.fits";
+                std::string augnum = util::IntToStringLeadingZeroes(i, 2);
+                output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
                 ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
                 roi.x = roi_found.x;
                 roi.y = roi_found.y;
                 roi.z = roi_found.z;
-                vkn::ImageU16L3D cropped = image::Crop(resized, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
+                Aug aug = {x: 0, y: 0, z: 0};
+                
+                do {
+                    aug.x = -50 + rand() % 100;
+                    aug.y = -10 + rand() % 20;
+                } while (!(aug.x + roi.x > 0  && aug.x + roi.x < stacked.width && aug.y + roi.y > 0  && aug.y + roi.y < stacked.height));
+
+                AUGS.push_back(aug);
+                vkn::ImageU16L3D cropped = image::Crop(resized, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
                 WriteFITS(output_path, cropped);
             }
            

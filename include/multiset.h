@@ -19,6 +19,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <cstdlib>
 #include <thread>
 
 typedef struct {
