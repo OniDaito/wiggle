@@ -318,7 +318,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 do {
                     aug.x = -50 + rand() % 100;
                     aug.y = -10 + rand() % 20;
-                } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < stacked.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < stacked.height));
+                } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < resized.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < resized.height));
 
                 AUGS.push_back(aug);
                 vkn::ImageU16L3D cropped = image::Crop(resized, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
