@@ -47,8 +47,41 @@ typedef struct {
     int stacksize = 51;         // How many stacks in our input 2D image
     int roi_width = 128;
     int roi_height = 128;
-    int roi_depth = 25; 
+    int roi_depth = 25;
+    int num_rois = 1;
 } Options;
+
+// An offset to the ROI - for augmentation purposes
+typedef struct {
+    int x;
+    int y;
+    int z;
+} aug;
+
+
+// A fixed set of augmentation directions
+std::vector<aug> AUGS = {
+    {0, 0, 0},
+    {1, -1, 0},
+    {-4, 1, 0},
+    {4, 4, 0},
+    {-2, 1, 0},
+    {-1, 3, 0},
+    {1, 3, 0},
+    {2, 2, 0},
+    {2, -1, 0},
+    {-1, -1, 0},
+    {-3, -2, 0},
+    {-1, 1, 0},
+    {4, -1, 0},
+    {-4, -4, 0},
+    {2, -1, 0},
+    {1, -3, 0},
+    {-1, -3, 0},
+    {-2, -2, 0},
+    {-2, 1, 0},
+    {1, 1, 0},
+};
 
 void printerror( int status) {
     if (status) {
@@ -290,12 +323,17 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
         vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
         if (options.crop) {
-            ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
-            roi.x = roi_found.x;
-            roi.y = roi_found.y;
-            roi.z = roi_found.z;
-            vkn::ImageU16L3D cropped = image::Crop(resized, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
-            WriteFITS(output_path, cropped);
+            for (int i = 0; i < options.num_rois; i++){
+                std::string aug = util::IntToStringLeadingZeroes(i, 2);
+                output_path = options.output_path + "/" + image_id + "_" + aug + "_layered.fits";
+                ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
+                roi.x = roi_found.x;
+                roi.y = roi_found.y;
+                roi.z = roi_found.z;
+                vkn::ImageU16L3D cropped = image::Crop(resized, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
+                WriteFITS(output_path, cropped);
+            }
+           
         } else {
             WriteFITS(output_path, resized);
         }
@@ -384,8 +422,12 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
             if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
                 vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
                 if (options.crop) {
-                    vkn::ImageU8L3D cropped = image::Crop(resized, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
-                    WriteFITS(output_path, cropped);
+                    for (int i = 0; i < options.num_rois; i++){
+                        std::string aug = util::IntToStringLeadingZeroes(i, 2);
+                        output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
+                        vkn::ImageU8L3D cropped = image::Crop(resized, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
+                        WriteFITS(output_path, cropped);
+                    }
                 } else {
                     WriteFITS(output_path, resized);
                 }
@@ -548,7 +590,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -604,6 +646,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'l':
                 options.roi_depth = util::FromString<int>(optarg);
+                break;
+            case 'q':
+                options.num_rois = util::FromString<int>(optarg);
                 break;
         }
     }
