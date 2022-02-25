@@ -19,12 +19,15 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.h>
-#include <masamune/util/string.h>
-#include <masamune/util/file.h>
-#include <masamune/image/tiff.h>
-#include <masamune/image/basic.h>
+#include <masamune/masamune_prog.hpp>
+#include <masamune/util/string.hpp>
+#include <masamune/util/file.hpp>
+#include <masamune/image/tiff.hpp>
+#include <masamune/image/basic.hpp>
 #include <vector>
+#include "data.hpp"
+#include "image.hpp"
+
 
 using namespace masamune;
 
@@ -41,14 +44,6 @@ typedef struct {
     int height = 300;
 } Options;
 
-
-void printerror( int status) {
-    if (status) {
-       fits_report_error(stderr, status);   // print error report
-       exit( status );                      // terminate the program, returning error status
-    }
-    return;
-}
 
 /**
  * Check the area id against the neuron list, setting it to what it claims to be.
@@ -81,96 +76,6 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
             }
         }
     }
-}
-
-/**
- * Given a 3D image, flatten it.
- * 
- * @param mask - a 3D image
- * 
- * @return a 2D vkn image
- */
-vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
-    vkn::ImageU8L flat;
-    flat.width = mask.width;
-    flat.height = mask.height;
-    vkn::Alloc(flat);
-
-    for (uint32_t d = 0; d < mask.depth; d++) {
-
-        for (uint32_t y = 0; y < flat.height; y++) {
-            for (uint32_t x = 0; x < flat.width; x++) {
-                uint16_t val = mask.image_data[d][y][x];
-                uint16_t ext = flat.image_data[y][x];
-                if (ext == 0) {
-                    flat.image_data[y][x] = val;
-                }
-            }
-        }
-    }
-    return flat;
-}
-
-
-void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  BYTE_IMG; // 8-bit unsigned short pixel values
-    long naxis    =   3;        // 3D
-    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
-        printerror( status );
-    }
-
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-/**
- * Return false if all elements are zero
- *
- * @param image - vkn::ImageU8L3D
- *
- * @return bool
- */
-
-bool non_zero(vkn::ImageU8L3D &image) {
-
-    for (uint32_t d = 0; d < image.depth; d++) {
-        for (uint32_t y = 0; y < image.height; y++) {
-            for (uint32_t x = 0; x < image.width; x++) {
-                uint16_t val = image.image_data[d][y][x];
-       
-                if (val != 0) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
 }
 
 

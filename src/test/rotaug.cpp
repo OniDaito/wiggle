@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "test/doctest.h"
-#include "multiset.h"
+#include "volume.hpp"
+#include "rots.hpp"
 
 using namespace masamune;
 
@@ -20,5 +21,15 @@ TEST_CASE("Testing ROI crop") {
 
     std::string path1("./images/worm3d_cropped.tif");
     image::SaveTiff(path1, test_image0_cropped);
+
+    //glm::quat quat = RandRot();
+    glm::quat quat = glm::quat(1.0,0,0,0);
+    quat = glm::rotate(quat, static_cast <float>(M_PI/4.0), glm::vec3(0.0,0,1.0));
+    std::cout << "ROT (w,x,y,z): " << quat.w << ", " << quat.x << ", " << quat.y << ", " << quat.z << std::endl;
+
+    test_image0_cropped = Augment(test_image0_cropped, quat, 6.0);
+
+    std::string path2("./images/worm3d_augmented.tif");
+    image::SaveTiff(path2, test_image0_cropped);
 
 }

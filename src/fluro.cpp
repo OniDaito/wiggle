@@ -16,8 +16,8 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/util/string.h>
-#include <masamune/util/file.h>
+#include <masamune/util/string.hpp>
+#include <masamune/util/file.hpp>
 #include <vector>
 
 using namespace masamune;

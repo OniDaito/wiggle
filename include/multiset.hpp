@@ -11,11 +11,11 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.h>
-#include <masamune/util/string.h>
-#include <masamune/util/file.h>
-#include <masamune/image/tiff.h>
-#include <masamune/image/basic.h>
+#include <masamune/masamune_prog.hpp>
+#include <masamune/util/string.hpp>
+#include <masamune/util/file.hpp>
+#include <masamune/image/tiff.hpp>
+#include <masamune/image/basic.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>

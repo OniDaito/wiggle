@@ -4,20 +4,19 @@
  * █▄▀░▀▄██░▄█░█▄▀█░█▄▀█░██░▄▄
  * ██▄█▄██▄▄▄█▄▄▄▄█▄▄▄▄█▄▄█▄▄▄
  * ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
- * @file stack.cc
+ * @file flatten.cc
  * @author Benjamin Blundell - k1803390@kcl.ac.uk
  * @date 01/06/2021
- * @brief Given QueeLim style tiff stacks, convert to a FITS stack
+ * @brief Given QueeLim style tiff stacks, flatten them
  * 
  */
 
 #include <getopt.h>
-#include <fitsio.h>
-#include <masamune/masamune_prog.h>
-#include <masamune/util/string.h>
-#include <masamune/util/file.h>
-#include <masamune/image/tiff.h>
-#include <masamune/image/basic.h>
+#include <masamune/masamune_prog.hpp>
+#include <masamune/util/string.hpp>
+#include <masamune/util/file.hpp>
+#include <masamune/image/tiff.hpp>
+#include <masamune/image/basic.hpp>
 
 #include <algorithm>
 
@@ -28,6 +27,7 @@ typedef struct {
     std::string image_path = ".";
     std::string output_path = ".";
     size_t num_layers = 51;
+    bool max_intensity = false;
     bool flatten = false;
     bool rename = false;
     bool bottom = false;
@@ -38,65 +38,65 @@ typedef struct {
 } Options;
 
 
-void printerror( int status) {
-    if (status) {
-       fits_report_error(stderr, status);   // print error report
-       exit( status );                      // terminate the program, returning error status
+/**
+ * Given a tiff file, return the maximum intensity projection
+ * 
+ * @param options - the options struct
+ * @param tiff_path - the file path to the tiff
+ *
+ * @return bool if success or not
+ */
+
+bool MaximumIntensity(Options &options, std::string &tiff_path) {
+    static int idx = 0;
+    vkn::ImageU16L image;
+    vkn::ImageU16L flattened;
+    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
+    flattened.width = image.width;
+    flattened.height = image.height / (options.num_layers * options.channels);
+    vkn::Alloc(flattened);
+    uint coff = 0;
+
+    if (options.bottom) {
+        coff = flattened.height;
     }
-    return;
+
+    for (uint32_t d = 0; d < options.num_layers; d++) {
+
+        for (uint32_t y = 0; y < flattened.height; y++) {
+
+            for (uint32_t x = 0; x < flattened.width; x++) {
+                uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
+                uint16_t ext = flattened.image_data[y][x];
+                if (val > ext){
+                    flattened.image_data[y][x] = val;
+                }
+            }
+        }
+    }
+
+    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::string image_id = tokens_log[3];
+    image_id = util::StringRemove(image_id, "0xAutoStack");
+    std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
+
+    if (options.rename == true) {
+        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        output_path_png = options.output_path + "/" + image_id + "_mip.png";
+        std::cout << "Renaming " << tiff_path << " to " << output_path_png << std::endl;
+    }
+
+    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
+    // image::SaveTiff(output_path, flattened);
+    if (flattened.width != options.width || flattened.height != options.height) {
+        std::cout << "Resizing " << output_path_png << std::endl;
+        image::Resize(flattened, options.width, options.height);
+    }
+
+    image::Save(output_path_png, flattened);
+    idx += 1;
+    return true;
 }
-
-void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  USHORT_IMG; // 16-bit unsigned short pixel values
-    long naxis    =   3;        // 3D
-    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    /* write the required keywords for the primary array image.     */
-    /* Since bitpix = USHORT_IMG, this will cause cfitsio to create */
-    /* a FITS image with BITPIX = 16 (signed short integers) with   */
-    /* BSCALE = 1.0 and BZERO = 32768.  This is the convention that */
-    /* FITS uses to store unsigned integers.  Note that the BSCALE  */
-    /* and BZERO keywords will be automatically written by cfitsio  */
-    /* in this case.                                                */
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
-        printerror( status );
-    }
-
-    /* write another optional keyword to the header */
-    /* Note that the ADDRESS of the value is passed in the routine */
-    /* exposure = 1500;
-    if ( fits_update_key(fptr, TLONG, "EXPOSURE", &exposure,
-         "Total Exposure Time", &status) )
-         printerror( status );           */
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
 
 /**
  * Given a tiff file return the same file but with one channel and 
@@ -108,8 +108,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path) {
-    static int idx = 0;
+bool TiffToLayers(Options &options, std::string &tiff_path) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D flattened;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -127,10 +126,9 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
 
         for (uint32_t y = 0; y < flattened.height; y++) {
 
-            // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < flattened.width; x++) {
                 uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
-                flattened.image_data[d][flattened.height - y - 1][x] = val;
+                flattened.image_data[d][y][x] = val;
             }
         }
     }
@@ -138,23 +136,9 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
     image_id = util::StringRemove(image_id, "0xAutoStack");
-    std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
+    std::string output_path = options.output_path + "/" + image_id + "_layered.tiff";
+    image::SaveTiff(output_path, flattened);
 
-    if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
-        output_path = options.output_path + "/" + image_id + "_layered.fits";
-        std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
-    }
-
-    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
-    // image::SaveTiff(output_path, flattened);
-    /*if (flattened.width != options.width || flattened.height != options.height) {
-        std::cout << "Resizing " << output_path << std::endl;
-        image::Resize(flattened, options.width, options.height);
-    }*/
-
-    WriteFITS(output_path, flattened);
-    idx += 1;
     return true;
 }
 
@@ -183,6 +167,9 @@ int main (int argc, char ** argv) {
             case 'l' :
                 options.num_layers = util::FromString<uint32_t>(std::string(optarg));
                 break;
+            case 'm' :
+                options.max_intensity = true;
+                break;
             case 'r' :
                 options.rename = true;
                 break;
@@ -204,7 +191,7 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading images from " << options.image_path << std::endl;
 
-    std::cout << "Options: bottom: " << options.bottom << " width: " << options.width
+    std::cout << "Options: max intensity " << options.max_intensity << ", bottom: " << options.bottom << " width: " << options.width
         << " height: " << options.height << " Z layers: " << options.num_layers << std::endl;
     // Browse the directory looking for files
     std::vector<std::string> files = util::ListFiles(options.image_path);
@@ -222,12 +209,11 @@ int main (int argc, char ** argv) {
             std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
             int idx = 0;
             for (std::string t : tokens1) {
-                if (util::StringContains(t, "AutoStack")) {
+                if (util::StringContains(t, "AutoStack")){
                     break;
                 }
                 idx += 1;
             }
-
             int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "0xAutoStack"));
             std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
             int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "0xAutoStack"));
@@ -241,8 +227,13 @@ int main (int argc, char ** argv) {
     // assert(tiff_files.size() == log_files.size());
     for (std::string tiff : tiff_files) {
         // Bottom channel
-        std::cout << "Flattening: " << tiff << std::endl;
-        TiffToFits(options, tiff);
+        if (options.max_intensity) {
+            std::cout << "MIP-ing: " << tiff << std::endl;
+            MaximumIntensity(options, tiff);
+        } else {
+            std::cout << "Flattening: " << tiff << std::endl;
+            TiffToLayers(options, tiff);
+        }
     }
 
     return EXIT_SUCCESS;
