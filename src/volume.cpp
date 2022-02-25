@@ -217,7 +217,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     for (int i = 0; i < options.num_augs; i++){
         glm::quat q = ROTS[i];
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
-        output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
+        output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
         prefinal = Augment(prefinal, q, options.depth_scale);
         WriteFITS(output_path, prefinal);
     }
