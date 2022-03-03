@@ -112,16 +112,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
-    // image::SaveTiff(output_path, flattened);
-    /*if (flattened.width != options.width || flattened.height != options.height) {
-        std::cout << "Resizing " << output_path << std::endl;
-        image::Resize(flattened, options.width, options.height);
-    }*/
-
+    vkn::ImageU16L3D final_image = stacked;
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
-        vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
+        vkn::ImageU16L3D final_image = image::Resize(stacked, options.width, options.height, options.depth);
+        
         if (options.crop) {
             AUGS.clear();
 
@@ -130,7 +125,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             for (int i = 0; i < options.num_rois; i++){
                 std::string augnum = util::IntToStringLeadingZeroes(i, 2);
                 output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
-                ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
+                ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
                 roi.x = roi_found.x;
                 roi.y = roi_found.y;
                 roi.z = roi_found.z;
@@ -139,20 +134,20 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 do {
                     aug.x = -50 + rand() % 100;
                     aug.y = -10 + rand() % 20;
-                } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < resized.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < resized.height));
+                } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
 
                 AUGS.push_back(aug);
-                vkn::ImageU16L3D cropped = image::Crop(resized, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
-                WriteFITS(output_path, cropped);
+                final_image = image::Crop(final_image, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
             }
-           
-        } else {
-            WriteFITS(output_path, resized);
-        }
-    } else {
-        WriteFITS(output_path, stacked);
+        } 
     }
 
+    if (options.flatten){
+        vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
+        WriteFITS(output_path, flattened);
+    } else {
+        WriteFITS(output_path, final_image);
+    }
     return true;
 }
 
@@ -217,38 +212,25 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
+    vkn::ImageU8L3D final_image = neuron_mask; 
 
     if (non_zero(neuron_mask)) {
-        //image::SaveTiff(output_path, asi);
-        if (options.flatten){
-            vkn::ImageU8L neuron_mask_flat = Flatten(neuron_mask);
-            if (neuron_mask_flat.width != options.width || neuron_mask_flat.height != options.height) {
-                image::Resize(neuron_mask_flat, options.width, options.height);
-            }
-            //image::SaveTiff(output_path, asi_flat);
-            vkn::ImageU8L neuron_mask_flip = image::MirrorVertical(neuron_mask_flat);
-            image::Save(output_path_png, neuron_mask_flip);
 
-        } else {
-            // image::SaveTiff(output_path, asi);
-            if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
-                vkn::ImageU8L3D resized = image::Resize(neuron_mask, options.width, options.height, options.depth);
-                if (options.crop) {
-                    for (int i = 0; i < options.num_rois; i++){
-                        std::string aug = util::IntToStringLeadingZeroes(i, 2);
-                        output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
-                        vkn::ImageU8L3D cropped = image::Crop(resized, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
-                        WriteFITS(output_path, cropped);
-                    }
-                } else {
-                    WriteFITS(output_path, resized);
+        if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
+            final_image = image::Resize(neuron_mask, options.width, options.height, options.depth);
+
+            if (options.crop) {
+                for (int i = 0; i < options.num_rois; i++){
+                    std::string aug = util::IntToStringLeadingZeroes(i, 2);
+                    output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
+                    final_image = image::Crop(final_image, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
+           
                 }
-            } else {
-                WriteFITS(output_path, neuron_mask);
             }
-        } 
+        }
     }
 
+    WriteFITS(output_path, final_image);
     image_idx +=1;
     return true;
 }

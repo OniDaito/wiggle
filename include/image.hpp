@@ -28,6 +28,7 @@ void SetNeuron(masamune::vkn::ImageU16L &image_in, masamune::vkn::ImageU8L3D &im
 masamune::vkn::ImageU8L Flatten(masamune::vkn::ImageU8L3D &mask);
 void WriteFITS( std::string filename, masamune::vkn::ImageU16L3D flattened);
 void WriteFITS( std::string filename, masamune::vkn::ImageU8L3D flattened);
+void WriteFITS( std::string filename, masamune::vkn::ImageU16L flattened);
 bool non_zero(masamune::vkn::ImageU8L3D &image);
 void printerror( int status);
 

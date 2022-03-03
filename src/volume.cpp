@@ -46,6 +46,7 @@ typedef struct {
     int roi_width = 128;
     int roi_height = 128;
     int roi_depth = 25;
+    uint16_t cutoff = 270;
     float depth_scale = 6.2;    // Ratio of Z/Depth to XY
     int num_augs = 1;
 } Options;
@@ -85,6 +86,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
+                val = std::max(val - options.cutoff, 0);
                 stacked.image_data[d][stacked.height - y - 1][x] = val;
             }
         }

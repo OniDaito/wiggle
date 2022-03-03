@@ -17,80 +17,75 @@ include_dirs = [
   include_directories('include'),
 ]
 
+wiggle = library('wiggle', sources : [
+  'src/lib/image.cpp',
+  'src/lib/data.cpp',
+  'src/lib/roi.cpp',
+  'src/lib/rots.cpp',
+  ],
+  dependencies : [masamune, cfits, glfw],
+  include_directories : include_dirs,
+  link_args : '-Wl,-lstdc++fs',
+)
+
 
 # dataset
 executable('dataset',
-          'src/image.cpp',
-          'src/data.cpp',
           'src/dataset.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, cfits])
+          dependencies : [masamune, cfits],
+          link_with : wiggle)
 
 # multiset
 executable('multiset',
-          'src/roi.cpp',
-          'src/image.cpp',
-          'src/data.cpp',
           'src/multiset.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, cfits])
+          dependencies : [masamune, cfits],
+          link_with : wiggle)
 
 # volume
 executable('volume',
-          'src/roi.cpp',
-          'src/image.cpp',
-          'src/data.cpp',
-          'src/rots.cpp',
           'src/volume.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, cfits, glfw])
+          dependencies : [masamune, cfits, glfw],
+          link_with : wiggle)
 
 # flatten
 executable('flatten',
           'src/flatten.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune, cfits])
-
-# stack
-executable('stack',
-          'src/stack.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [masamune, cfits])
+          dependencies : [masamune, cfits],
+          link_with : wiggle)
 
 executable('fluro',
           'src/fluro.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [masamune])
+          dependencies : [masamune],
+          link_with : wiggle)
 
 # Tests
 test_basic = executable('test_basic',
   'src/test/basic.cpp',
   include_directories : include_dirs,
-  dependencies : [masamune, cfits])
+  dependencies : [masamune, cfits],
+  link_with : wiggle)
 
 test_roi = executable('test_roi',
-  'src/image.cpp',
-  'src/data.cpp',
-  'src/roi.cpp',
   'src/test/roi.cpp',
   include_directories : include_dirs,
-  dependencies : [masamune, cfits])
+  dependencies : [masamune, cfits],
+  link_with : wiggle)
 
 test_rotaug = executable('test_rotaug',
-  'src/roi.cpp',
-  'src/image.cpp',
-  'src/data.cpp',
-  'src/rots.cpp',
-  'src/rots.cpp',
   'src/test/rotaug.cpp',
   include_directories : include_dirs,
-  dependencies : [masamune, cfits])
+  dependencies : [masamune, cfits],
+  link_with : wiggle)
 
 test('Basic Test', test_basic)
 #test('ROI Test', test_roi)
