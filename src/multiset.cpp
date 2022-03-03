@@ -121,37 +121,45 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
         vkn::ImageU16L3D final_image = image::Resize(stacked, options.width, options.height, options.depth);
-        
-        if (options.crop) {
-            AUGS.clear();
-
-            // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
-            // that comes later as the mask must match
-            for (int i = 0; i < options.num_rois; i++){
-                std::string augnum = util::IntToStringLeadingZeroes(i, 2);
-                output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
-                ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
-                roi.x = roi_found.x;
-                roi.y = roi_found.y;
-                roi.z = roi_found.z;
-                Aug aug = {x: 0, y: 0, z: 0};
-                
-                do {
-                    aug.x = -50 + rand() % 100;
-                    aug.y = -10 + rand() % 20;
-                } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
-
-                AUGS.push_back(aug);
-                final_image = image::Crop(final_image, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
-            }
-        } 
     }
 
-    if (options.flatten){
-        vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
-        WriteFITS(output_path, flattened);
-    } else {
-        WriteFITS(output_path, final_image);
+    if (options.crop) {
+        AUGS.clear();
+
+        // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
+        // that comes later as the mask must match
+        for (int i = 0; i < options.num_rois; i++){
+            std::string augnum = util::IntToStringLeadingZeroes(i, 2);
+            output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
+            ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
+            roi.x = roi_found.x;
+            roi.y = roi_found.y;
+            roi.z = roi_found.z;
+            Aug aug = {x: 0, y: 0, z: 0};
+            
+            do {
+                aug.x = -50 + rand() % 100;
+                aug.y = -10 + rand() % 20;
+            } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
+
+            AUGS.push_back(aug);
+            final_image = image::Crop(final_image, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
+            if (options.flatten){
+                vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
+                WriteFITS(output_path, flattened);
+            } else {
+                WriteFITS(output_path, final_image);
+            }
+     
+        }
+    } else { 
+
+      if (options.flatten){
+          vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
+          WriteFITS(output_path, flattened);
+      } else {
+          WriteFITS(output_path, final_image);
+      }
     }
     return true;
 }
@@ -225,17 +233,20 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
             final_image = image::Resize(neuron_mask, options.width, options.height, options.depth);
 
             if (options.crop) {
-                for (int i = 0; i < options.num_rois; i++){
+                for (int i = 0; i < options.num_rois; i++) {
                     std::string aug = util::IntToStringLeadingZeroes(i, 2);
                     output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
-                    final_image = image::Crop(final_image, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);
-           
+                    final_image = image::Crop(final_image, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);        
+                    WriteFITS(output_path, final_image);
                 }
             }
         }
     }
 
-    WriteFITS(output_path, final_image);
+    if (!options.crop) {
+      WriteFITS(output_path, final_image);
+    }
+    
     image_idx +=1;
     return true;
 }
