@@ -51,6 +51,7 @@ typedef struct {
     int roi_height = 128;
     int roi_depth = 25;
     int num_rois = 1;
+    uint16_t cutoff = 0;
 } Options;
 
 // An offset to the ROI - for augmentation purposes
@@ -75,7 +76,7 @@ std::vector<Aug> AUGS;
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
+bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi, bool flipy) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -90,13 +91,16 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     }
 
     for (uint32_t d = 0; d < stacked.depth; d++) {
-
         for (uint32_t y = 0; y < stacked.height; y++) {
-
             // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
-                stacked.image_data[d][stacked.height - y - 1][x] = val;
+
+                if (flipy) {
+                    stacked.image_data[d][stacked.height - y - 1][x] = std::max(val - options.cutoff, 0);
+                } else {
+                    stacked.image_data[d][y][x] = std::max(val - options.cutoff, 0);
+                }
             }
         }
     }
@@ -113,6 +117,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     }
 
     vkn::ImageU16L3D final_image = stacked;
+
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
         vkn::ImageU16L3D final_image = image::Resize(stacked, options.width, options.height, options.depth);
@@ -250,7 +255,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:q:d:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -285,6 +290,9 @@ int main (int argc, char ** argv) {
             case 'n':
                 options.offset_number = util::FromString<int>(optarg);
                 image_idx = options.offset_number;
+                break;
+            case 'd':
+                options.cutoff = util::FromString<uint16_t>(optarg);
                 break;
             case 'z':
                 options.depth = util::FromString<int>(optarg);
@@ -359,7 +367,7 @@ int main (int argc, char ** argv) {
                         try {
                             ROI roi;
                             std::cout << "Stacking: " << tiff_input << std::endl;
-                            TiffToFits(options, tiff_input, image_idx, roi);
+                            TiffToFits(options, tiff_input, image_idx, roi, !options.flatten);
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
                             paired = true;
                             ProcessTiff(options, tiff_anno, log, image_idx, roi);
