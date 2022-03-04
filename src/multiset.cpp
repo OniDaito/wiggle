@@ -155,14 +155,14 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
         
                 ROI roi = AUGS[i];
-                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+                /*vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
                 
                 if (options.flatten){
                     vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::MAX_INTENSITY);
                     WriteFITS(output_path, flattened);
                 } else {
                     WriteFITS(output_path, final_image);
-                }
+                }*/
             });
         }
 
