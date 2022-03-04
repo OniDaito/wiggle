@@ -132,8 +132,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             int miny = -roi.y / 10;
             int maxy = (final_image.height - roi.y + options.roi_height) / 10;
 
-            roi.x += minx + rand() % (maxx - minx);
-            roi.y += miny + rand() % (maxy - miny);
+            roi.x = minx + rand() % (maxx - minx);
+            roi.y = miny + rand() % (maxy - miny);
 
             AUGS.push_back(roi);
             roi.x = roi_found.x;
