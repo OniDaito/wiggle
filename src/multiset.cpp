@@ -54,16 +54,9 @@ typedef struct {
     uint16_t cutoff = 0;
 } Options;
 
-// An offset to the ROI - for augmentation purposes
-typedef struct {
-    int x;
-    int y;
-    int z;
-} Aug;
-
 
 // A fixed set of augmentation directions
-std::vector<Aug> AUGS;
+std::vector<ROI> AUGS;
 
 
 /**
@@ -125,16 +118,25 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     if (options.crop) {
         AUGS.clear();
-        Aug aug = {x: 0, y: 0, z: 0};
-        AUGS.push_back(aug);
+    
+        ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
+        ROI roi;
+        roi.x = roi_found.x;
+        roi.y = roi_found.y;
+        roi.z = roi_found.z;
+
+        AUGS.push_back(roi);
 
         for (int i = 1; i < options.num_rois; i++){
             do {
-                aug.x = -20 + rand() % 40;
-                aug.y = -20 + rand() % 40;
-            } while (!(aug.x + roi.x >= 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y >= 0  && aug.y + roi.y + options.roi_height < final_image.height));
+                roi.x += -20 + rand() % 40;
+                roi.y += -20 + rand() % 40;
 
-            AUGS.push_back(aug);
+            } while (!(roi.x >= 0  && roi.x + options.roi_width < final_image.width && roi.y >= 0  && roi.y + options.roi_height < final_image.height));
+
+            AUGS.push_back(roi);
+            roi.x = roi_found.x;
+            roi.y = roi_found.y;
         }
 
         // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
@@ -142,13 +144,10 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         for (int i = 0; i < options.num_rois; i++){
             std::string augnum = util::IntToStringLeadingZeroes(i, 2);
             output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
-            ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
-            roi.x = roi_found.x;
-            roi.y = roi_found.y;
-            roi.z = roi_found.z;
-            aug = AUGS[i];
-         
-            final_image = image::Crop(final_image, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
+       
+            roi = AUGS[i];
+            final_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+            
             if (options.flatten){
                 vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
                 WriteFITS(output_path, flattened);
