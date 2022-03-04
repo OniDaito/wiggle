@@ -43,7 +43,8 @@ executable('multiset',
           install : false,
           include_directories : include_dirs,
           dependencies : [masamune, cfits],
-          link_with : wiggle)
+          link_with : wiggle,
+          link_args : '-Wl,-lstdc++fs,-lpthread')
 
 # volume
 executable('volume',
