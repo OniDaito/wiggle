@@ -149,9 +149,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
         // that comes later as the mask must match
 
-
         for (int i = 0; i < options.num_rois; i++){
-            auto new_thread = pool.enqueue( [i, image_id, options, final_image] {
+            auto new_thread = pool.enqueue( [&, i, image_id, options, final_image] {
                 std::string augnum = util::IntToStringLeadingZeroes(i, 2);
                 std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
         
@@ -167,7 +166,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             });
         }
 
-        //pool.stop();
+        pool.stop();
 
     } else { 
 
