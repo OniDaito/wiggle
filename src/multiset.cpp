@@ -113,7 +113,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
-        vkn::ImageU16L3D final_image = image::Resize(stacked, options.width, options.height, options.depth);
+        final_image = image::Resize(stacked, options.width, options.height, options.depth);
     }
 
     if (options.crop) {
