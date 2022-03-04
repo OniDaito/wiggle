@@ -167,7 +167,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             });
         }
 
-        pool.stop();
+        //pool.stop();
 
     } else { 
 
