@@ -25,7 +25,7 @@ wiggle = library('wiggle', sources : [
   ],
   dependencies : [masamune, cfits, glfw],
   include_directories : include_dirs,
-  link_args : '-Wl,-lstdc++fs',
+  link_args : '-Wl,-lstdc++fs,-lpthread',
 )
 
 
