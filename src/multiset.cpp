@@ -23,7 +23,6 @@
  *
  */
 
-
 #include "multiset.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -70,7 +69,7 @@ std::vector<ROI> AUGS;
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi, bool flipy) {
+bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool flipy) {
     vkn::ImageU16L image;
     vkn::ImageU16L3D stacked;
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
@@ -79,8 +78,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     stacked.height = image.height / (stacked.depth * options.channels); // Two channels
     vkn::Alloc(stacked);
     uint coff = 0;
-
+    ROI roi;
     ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
+    std::vector<std::future<int>> futures;
 
 
     if (options.bottom) {
@@ -139,8 +139,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             roi.x += minx + (rand() % (maxx - minx));
             roi.y += miny + (rand() % (maxy - miny));
 
-            std::cout << "ROIS " << roi.x << ", " << roi.y << std::endl; 
-
             AUGS.push_back(roi);
             roi.x = roi_found.x;
             roi.y = roi_found.y;
@@ -150,28 +148,39 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         // that comes later as the mask must match
 
         for (int i = 0; i < options.num_rois; i++){
-            auto new_thread = pool.enqueue( [&, i, image_id, options, final_image] {
+            futures.push_back(pool.execute( [i, options, image_id, final_image] {
                 std::string augnum = util::IntToStringLeadingZeroes(i, 2);
                 std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
-        
                 ROI roi = AUGS[i];
-                /*vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
                 
                 if (options.flatten){
-                    vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::MAX_INTENSITY);
-                    WriteFITS(output_path, flattened);
+                    vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::SUM);
+                    vkn::ImageF32L converted;
+                    vkn::Convert(flattened, converted);
+
+                    // Increase the Contrast
+                    for (uint32_t h = 0; h < converted.height; h++) {
+                        for (uint32_t w = 0; w < converted.width; w++) {
+                            float val = converted.image_data[h][w];
+                            converted.image_data[h][w] = val * 2.0;
+                        }
+                    }
+
+                    WriteFITS(output_path, converted);
                 } else {
                     WriteFITS(output_path, final_image);
-                }*/
-            });
+                }
+                return i;
+            }));
         }
 
-        pool.stop();
+        for (auto &fut : futures) { fut.get(); }
 
     } else { 
 
       if (options.flatten){
-          vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
+          vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::SUM);
           WriteFITS(output_path, flattened);
       } else {
           WriteFITS(output_path, final_image);
@@ -191,7 +200,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  * @return bool if success or not
  */
 
-bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
+bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
     vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
     image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
@@ -392,12 +401,12 @@ int main (int argc, char ** argv) {
 
                     if (ida == idb) {
                         try {
-                            ROI roi;
                             std::cout << "Stacking: " << tiff_input << std::endl;
-                            TiffToFits(options, tiff_input, image_idx, roi, !options.flatten);
+                            TiffToFits(options, tiff_input, image_idx, options.flatten);
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
                             paired = true;
-                            ProcessTiff(options, tiff_anno, log, image_idx, roi);
+                            // TODO - currently having issues with the ROI so I've left it out
+                            // ProcessTiff(options, tiff_anno, log, image_idx);
                             image_idx += 1;
                             break;
                         } catch (const std::exception &e) {

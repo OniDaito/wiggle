@@ -8,6 +8,9 @@ if get_option('buildtype') == 'debug'
   add_global_arguments('-DDEBUG', language : 'cpp')
 endif
 
+project_dir  = meson.current_source_dir() # MESON_SOURCE_ROOT
+compiler = meson.get_compiler('cpp')
+
 masamune = dependency('masamune')
 cfits = dependency('cfitsio')
 glfw = dependency('glfw3')
@@ -17,6 +20,8 @@ include_dirs = [
   include_directories('include'),
 ]
 
+external_libs = join_paths(project_dir, './external/')
+
 wiggle = library('wiggle', sources : [
   'src/lib/image.cpp',
   'src/lib/data.cpp',
@@ -25,7 +30,7 @@ wiggle = library('wiggle', sources : [
   ],
   dependencies : [masamune, cfits, glfw],
   include_directories : include_dirs,
-  link_args : '-Wl,-lstdc++fs,-lpthread',
+  link_args : '-lpthread',
 )
 
 
@@ -43,7 +48,7 @@ executable('multiset',
           install : false,
           include_directories : include_dirs,
           dependencies : [masamune, cfits],
-          link_with : wiggle,
+          link_with : [wiggle],
           link_args : '-Wl,-lstdc++fs,-lpthread')
 
 # volume

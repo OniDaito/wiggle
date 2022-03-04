@@ -85,7 +85,7 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
     return flat;
 }
 
-
+// TODO - writeFITS should probably go into masamune eventually
 
 void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
     fitsfile *fptr; 
@@ -175,6 +175,45 @@ void WriteFITS( std::string filename, vkn::ImageU16L flattened) {
               
     return;
 }
+
+
+void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
+    fitsfile *fptr; 
+    int status, ii, jj;
+    long  fpixel, nelements, exposure;
+
+    // initialize FITS image parameters
+    int bitpix   =  FLOAT_IMG; // 32 bit Float values
+    long naxis    =   2;        // 2D
+    long naxes[2] = { flattened.width, flattened.height }; 
+
+    remove(filename.c_str());   // Delete old file if it already exists
+    status = 0;                 // initialize status before calling fitsio routines
+
+    if (fits_create_file(&fptr, filename.c_str(), &status)) {
+         printerror( status );
+    } 
+
+
+    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
+        printerror( status ); 
+    }
+                  
+    fpixel = 1;                                  // first pixel to write
+    nelements = naxes[0] * naxes[1];  // number of pixels to write
+
+    // write the array of unsigned integers to the FITS file
+    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+        printerror( status );
+    }
+
+    if (fits_close_file(fptr, &status)) {
+        printerror( status );      
+    }       
+              
+    return;
+}
+
 
 void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     fitsfile *fptr; 
