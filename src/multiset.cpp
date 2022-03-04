@@ -50,7 +50,7 @@ typedef struct {
     int roi_width = 128;
     int roi_height = 128;
     int roi_depth = 25;
-    int num_rois = 1;
+    int num_rois = 10;
     uint16_t cutoff = 0;
 } Options;
 
@@ -118,7 +118,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     if (options.crop) {
         AUGS.clear();
-    
         ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
         ROI roi;
         roi.x = roi_found.x;
@@ -128,11 +127,13 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         AUGS.push_back(roi);
 
         for (int i = 1; i < options.num_rois; i++){
-            do {
-                roi.x += -20 + rand() % 40;
-                roi.y += -20 + rand() % 40;
+            int minx = -roi.x / 10;
+            int maxx = (final_image.width - roi.x + options.roi_width) / 10;
+            int miny = -roi.y / 10;
+            int maxy = (final_image.height - roi.y + options.roi_height) / 10;
 
-            } while (!(roi.x >= 0  && roi.x + options.roi_width < final_image.width && roi.y >= 0  && roi.y + options.roi_height < final_image.height));
+            roi.x += minx + rand() % (maxx - minx);
+            roi.y += miny + rand() % (maxy - miny);
 
             AUGS.push_back(roi);
             roi.x = roi_found.x;
@@ -240,7 +241,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
                 for (int i = 0; i < options.num_rois; i++) {
                     std::string aug = util::IntToStringLeadingZeroes(i, 2);
                     output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
-                    final_image = image::Crop(final_image, roi.x + AUGS[i].x, roi.y + AUGS[i].y, roi.z + AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);        
+                    final_image = image::Crop(final_image, AUGS[i].x, AUGS[i].y, AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);        
                     WriteFITS(output_path, final_image);
                 }
             }
