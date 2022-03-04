@@ -130,9 +130,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
         for (int i = 1; i < options.num_rois; i++){
             do {
-                aug.x = -50 + rand() % 100;
-                aug.y = -10 + rand() % 20;
-            } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
+                aug.x = -20 + rand() % 40;
+                aug.y = -20 + rand() % 40;
+            } while (!(aug.x + roi.x >= 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y >= 0  && aug.y + roi.y + options.roi_height < final_image.height));
 
             AUGS.push_back(aug);
         }
