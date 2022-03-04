@@ -126,13 +126,28 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     // Now perform some rotations and save the resulting 2D fits images
     ROTS.clear();
 
+    glm::quat q(1.0,0,0,0);
+    ROTS.push_back(q);
+
     for (int i = 0; i < options.num_augs; i++){
-        glm::quat q = RandRot();
-        ROTS.push_back(q);
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
         prefinal = Augment(prefinal, q, options.depth_scale);
-        WriteFITS(output_path, prefinal);
+        vkn::ImageU16L flattened = vkn::Project(prefinal, vkn::ProjectionType::SUM);
+        vkn::ImageF32L converted;
+        vkn::Convert(flattened, converted);
+
+        // Increase the Contrast
+        for (uint32_t h = 0; h < converted.height; h++) {
+            for (uint32_t w = 0; w < converted.width; w++) {
+                float val = converted.image_data[h][w];
+                converted.image_data[h][w] = val * 2.0;
+            }
+        }
+
+        WriteFITS(output_path, converted);
+        glm::quat q = RandRot();
+        ROTS.push_back(q);
     }
 
     return true;
