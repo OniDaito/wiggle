@@ -125,6 +125,17 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     if (options.crop) {
         AUGS.clear();
+        Aug aug = {x: 0, y: 0, z: 0};
+        AUGS.push_back(aug);
+
+        for (int i = 1; i < options.num_rois; i++){
+            do {
+                aug.x = -50 + rand() % 100;
+                aug.y = -10 + rand() % 20;
+            } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
+
+            AUGS.push_back(aug);
+        }
 
         // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
         // that comes later as the mask must match
@@ -135,14 +146,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             roi.x = roi_found.x;
             roi.y = roi_found.y;
             roi.z = roi_found.z;
-            Aug aug = {x: 0, y: 0, z: 0};
-            
-            do {
-                aug.x = -50 + rand() % 100;
-                aug.y = -10 + rand() % 20;
-            } while (!(aug.x + roi.x > 0  && aug.x + roi.x + options.roi_width < final_image.width && aug.y + roi.y > 0  && aug.y + roi.y + options.roi_height < final_image.height));
-
-            AUGS.push_back(aug);
+            aug = AUGS[i];
+         
             final_image = image::Crop(final_image, roi.x + aug.x, roi.y + aug.y, roi.z + aug.z, options.roi_width, options.roi_height, options.roi_depth);
             if (options.flatten){
                 vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
