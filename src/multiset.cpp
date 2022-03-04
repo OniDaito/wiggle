@@ -27,6 +27,7 @@
 #include "multiset.hpp"
 #include "image.hpp"
 #include "data.hpp"
+#include "threadpool.hpp"
 
 using namespace masamune;
 
@@ -78,6 +79,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     stacked.height = image.height / (stacked.depth * options.channels); // Two channels
     vkn::Alloc(stacked);
     uint coff = 0;
+
+    ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
+
 
     if (options.bottom) {
         coff = stacked.height;
@@ -144,21 +148,27 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
         // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
         // that comes later as the mask must match
+
+
         for (int i = 0; i < options.num_rois; i++){
-            std::string augnum = util::IntToStringLeadingZeroes(i, 2);
-            output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
-       
-            roi = AUGS[i];
-            final_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
-            
-            if (options.flatten){
-                vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::MAX_INTENSITY);
-                WriteFITS(output_path, flattened);
-            } else {
-                WriteFITS(output_path, final_image);
-            }
-     
+            auto new_thread = pool.enqueue( [i, image_id, options, final_image] {
+                std::string augnum = util::IntToStringLeadingZeroes(i, 2);
+                std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
+        
+                ROI roi = AUGS[i];
+                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+                
+                if (options.flatten){
+                    vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::MAX_INTENSITY);
+                    WriteFITS(output_path, flattened);
+                } else {
+                    WriteFITS(output_path, final_image);
+                }
+            });
         }
+
+        pool.stop();
+
     } else { 
 
       if (options.flatten){
