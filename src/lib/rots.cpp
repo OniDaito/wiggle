@@ -82,9 +82,9 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
                 fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
                 fz = ((fz / static_cast <float>(augmented.depth) * 2.0) - 1.0) * zyratio;
 
-                fx = fx * aug_ratio_xy;
+                /*fx = fx * aug_ratio_xy;
                 fy = fy * aug_ratio_xy;
-                fz = fz * aug_ratio_z;
+                fz = fz * aug_ratio_z;*/
 
                 glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
                 v = finalmat * v;
