@@ -123,7 +123,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     
     // Now perform some rotations and save the resulting 2D fits images
     ROTS.clear();
-
     glm::quat q(1.0,0,0,0);
     ROTS.push_back(q);
 
@@ -132,7 +131,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
         prefinal = Augment(prefinal, q, options.depth_scale);
         vkn::ImageF32L3D converted;
-        vkn::Convert(converted, prefinal);
+        vkn::Convert(prefinal, converted);
         vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);
     
         // Increase the Contrast
@@ -145,10 +144,10 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         if (options.width != stacked.width || options.height != stacked.height) {
-            converted = image::Resize(converted, options.width, options.height);
+            flattened = image::Resize(flattened, options.width, options.height);
         } 
 
-        WriteFITS(output_path, converted);
+        WriteFITS(output_path, flattened);
         q = RandRot();
         ROTS.push_back(q);
     }
