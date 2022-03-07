@@ -129,7 +129,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     for (int i = 0; i < options.num_augs; i++){
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        prefinal = Augment(prefinal, q, options.depth_scale);
+        prefinal = Augment(prefinal, q, options.width, options.depth, options.depth_scale);
         /*vkn::ImageF32L3D converted;
         vkn::Convert(prefinal, converted);
         vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);

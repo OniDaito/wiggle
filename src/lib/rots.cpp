@@ -38,7 +38,8 @@ glm::quat RandRot() {
  * @param image - the starting image
  * @param rot - a random rotation
  * @param zscale - the scale on Z depth
- *
+ * @param final_xy - the final width and height of the image
+ * @param final_depth - the final depth of the image
  * @return the augmented image
  * 
  * Augmentation works by rotating the volume around the origin. We scale 
@@ -46,13 +47,13 @@ glm::quat RandRot() {
  * often count for 6 times x and y), then we rotate and scale back.
  */
 
-vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, float zscale) {
+vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, uint32_t final_xy, uint32_t final_depth, glm::quat rot, float zscale) {
     vkn::ImageU16L3D augmented;
     assert(image.width == image.height);
-    int d = int(sqrt((image.width * image.width) / 2.0f));
-    augmented.width = d;
-    augmented.height = d;
-    augmented.depth = d / zscale;
+    
+    augmented.width = final_xy;
+    augmented.height = final_xy;
+    augmented.depth = final_depth;
 
     float aug_ratio_xy = augmented.width / image.width;
     float aug_ratio_z = augmented.depth / image.depth;
