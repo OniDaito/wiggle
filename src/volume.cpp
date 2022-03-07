@@ -231,8 +231,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         prefinal = Augment(prefinal, q, options.depth_scale);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
-        if (options.width != prefinal.width || options.height != prefinal.height) {
-            prefinal = image::Resize(prefinal, options.width, options.height);
+        if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
+            prefinal = image::Resize(prefinal, options.width, options.height, options.depth);
         } 
         WriteFITS(output_path, prefinal);
     }
