@@ -28,8 +28,8 @@
 #include <glm/vec4.hpp>
 #include "multiset.hpp"
 
-masamune::vkn::ImageU16L3D Augment(masamune::vkn::ImageU16L3D &image, glm::quat rot, uint32_t final_xy, uint32_t final_depth, float zscale);
-masamune::vkn::ImageU8L3D Augment(masamune::vkn::ImageU8L3D &image, glm::quat rot, uint32_t final_xy, uint32_t final_depth, float zscale);
+masamune::vkn::ImageU16L3D Augment(masamune::vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy, size_t final_depth, float zscale);
+masamune::vkn::ImageU8L3D Augment(masamune::vkn::ImageU8L3D &image, glm::quat rot, size_t final_xy, size_t final_depth, float zscale);
 glm::quat RandRot();
 
 #endif

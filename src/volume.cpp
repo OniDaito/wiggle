@@ -34,7 +34,6 @@ typedef struct {
     std::string annotation_path = ".";
     std::string prefix = "";
     bool rename = false;
-    bool crop = false;          // Crop the image to an ROI.
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
@@ -43,8 +42,8 @@ typedef struct {
     int width = 640;            // The desired dimensions
     int height = 300;
     int stacksize = 51;         // How many stacks in our input 2D image
-    int roi_xy = 128;           // Square across this dimension
-    int roi_depth = 21;         // Multiplied by the depth scale later
+    size_t roi_xy = 128;           // Square across this dimension
+    size_t roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
     float depth_scale = 6.2;    // Ratio of Z/Depth to XY
     int num_augs = 1;
@@ -104,22 +103,19 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     prefinal = stacked;
 
-    if (options.crop) {
-        // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
-        // that comes later as the mask must match
-        int d = int(sqrt(2.0f * options.roi_xy * options.roi_xy));
-        int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
+    // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
+    // that comes later as the mask must match
+    int d = int(sqrt(2.0f * options.roi_xy * options.roi_xy));
+    int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
 
-        // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-        ROI roi_found = FindROI(prefinal, d, depth);
-        roi.x = roi_found.x;
-        roi.y = roi_found.y;
-        roi.z = roi_found.z;
-        roi.xy_dim = d;
-        roi.depth = depth;
-        prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
-    }
-
+    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+    ROI roi_found = FindROI(prefinal, d, depth);
+    roi.x = roi_found.x;
+    roi.y = roi_found.y;
+    roi.z = roi_found.z;
+    roi.xy_dim = d;
+    roi.depth = depth;
+    prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     
     // Now perform some rotations and save the resulting 2D fits images
     ROTS.clear();
@@ -129,7 +125,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     for (int i = 0; i < options.num_augs; i++){
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        prefinal = Augment(prefinal, q, options.width, options.depth, options.depth_scale);
+        prefinal = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
         /*vkn::ImageF32L3D converted;
         vkn::Convert(prefinal, converted);
         vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);
@@ -220,19 +216,15 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
     prefinal = neuron_mask;
-
-    if (non_zero(neuron_mask)) {
-        if (options.crop) {
-            prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
-        }
-    }
+    prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
+        
 
     // Now generate the masks
     for (int i = 0; i < options.num_augs; i++){
         glm::quat q = ROTS[i];
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
-        prefinal = Augment(prefinal, q, options.depth_scale);
+        prefinal = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
@@ -284,9 +276,6 @@ int main (int argc, char ** argv) {
                 break;
             case 't' :
                 options.threeclass = true;
-                break;
-            case 'c' :
-                options.crop = true;
                 break;
             case 'n':
                 options.offset_number = util::FromString<int>(optarg);
