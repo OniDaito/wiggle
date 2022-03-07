@@ -82,7 +82,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
     ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
     std::vector<std::future<int>> futures;
 
-
     if (options.bottom) {
         coff = stacked.height;
     }
