@@ -31,6 +31,6 @@ typedef struct {
     double sum;
 } ROI;
 
-ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t width, size_t height, size_t depth);
+ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth);
 
 #endif

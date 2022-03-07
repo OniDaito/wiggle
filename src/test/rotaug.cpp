@@ -12,7 +12,7 @@ TEST_CASE("Testing ROI crop") {
     CHECK(test_image0.width == 320);
     CHECK(test_image0.height == 150);
 
-    ROI roi = FindROI(test_image0, 128, 128, 25);
+    ROI roi = FindROI(test_image0, 128, 25);
     std::cout << "ROI (x,y,z,sum): " << roi.x << ", " << roi.y << ", " << roi.z << ", " << roi.sum << std::endl;
 
     vkn::ImageU16L3D test_image0_cropped = image::Crop(test_image0, roi.x, roi.y, roi.z, 128, 128, 25);

@@ -111,7 +111,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
 
         // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-        ROI roi_found = FindROI(prefinal, d, d, depth);
+        ROI roi_found = FindROI(prefinal, d, depth);
         roi.x = roi_found.x;
         roi.y = roi_found.y;
         roi.z = roi_found.z;

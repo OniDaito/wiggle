@@ -47,8 +47,7 @@ typedef struct {
     int width = 640;            // The desired dimensions
     int height = 300;
     int stacksize = 51;         // How many stacks in our input 2D image
-    int roi_width = 128;
-    int roi_height = 128;
+    int roi_xy = 128;
     int roi_depth = 25;
     int num_rois = 10;
     uint16_t cutoff = 0;
@@ -121,7 +120,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
 
     if (options.crop) {
         AUGS.clear();
-        ROI roi_found = FindROI(final_image,options.roi_width, options.roi_height, options.roi_depth);
+        ROI roi_found = FindROI(final_image,options.roi_xy, options.roi_depth);
         ROI roi;
         roi.x = roi_found.x;
         roi.y = roi_found.y;
@@ -131,9 +130,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
 
         for (int i = 1; i < options.num_rois; i++){
             int minx = -static_cast<int>(roi.x) / 10;
-            int maxx = (final_image.width - roi.x - options.roi_width) / 10;
+            int maxx = (final_image.width - roi.x - options.roi_xy) / 10;
             int miny = -static_cast<int>(roi.y) / 10;
-            int maxy = (final_image.height - roi.y - options.roi_height) / 10;
+            int maxy = (final_image.height - roi.y - options.roi_xy) / 10;
 
             roi.x += minx + (rand() % (maxx - minx));
             roi.y += miny + (rand() % (maxy - miny));
@@ -151,7 +150,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
                 std::string augnum = util::IntToStringLeadingZeroes(i, 2);
                 std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
                 ROI roi = AUGS[i];
-                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
+                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
                 
                 if (options.flatten){
                     vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::SUM);
@@ -260,7 +259,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
                 for (int i = 0; i < options.num_rois; i++) {
                     std::string aug = util::IntToStringLeadingZeroes(i, 2);
                     output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
-                    final_image = image::Crop(final_image, AUGS[i].x, AUGS[i].y, AUGS[i].z, options.roi_width, options.roi_height, options.roi_depth);        
+                    final_image = image::Crop(final_image, AUGS[i].x, AUGS[i].y, AUGS[i].z, options.roi_xy, options.roi_xy, options.roi_depth);        
                     WriteFITS(output_path, final_image);
                 }
             }
@@ -290,7 +289,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:k:l:q:d:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:frtbcn:z:w:h:s:j:l:q:d:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -342,10 +341,7 @@ int main (int argc, char ** argv) {
                 options.stacksize = util::FromString<int>(optarg);
                 break;
             case 'j':
-                options.roi_width = util::FromString<int>(optarg);
-                break;
-            case 'k':
-                options.roi_height = util::FromString<int>(optarg);
+                options.roi_xy = util::FromString<int>(optarg);
                 break;
             case 'l':
                 options.roi_depth = util::FromString<int>(optarg);
