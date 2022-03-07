@@ -120,20 +120,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     }
 
-    vkn::ImageU16L flattened = vkn::Project(prefinal, vkn::ProjectionType::SUM);
-    // Increase the Contrast
-    vkn::ImageF32L converted;
-    vkn::Convert(flattened, converted);
-
-    for (uint32_t h = 0; h < converted.height; h++) {
-        for (uint32_t w = 0; w < converted.width; w++) {
-            float val = converted.image_data[h][w];
-            converted.image_data[h][w] = val * 2.0;
-        }
-    }
-    WriteFITS(output_path, converted);
-
-    /*
+    
     // Now perform some rotations and save the resulting 2D fits images
     ROTS.clear();
 
@@ -164,7 +151,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         WriteFITS(output_path, converted);
         q = RandRot();
         ROTS.push_back(q);
-    }*/
+    }
 
     return true;
 }
