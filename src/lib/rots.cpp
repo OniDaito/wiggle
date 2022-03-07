@@ -74,7 +74,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
     glm::mat4 expand = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, zscale));
     glm::mat4 cropper = glm::scale(glm::mat4(1.0f), glm::vec3(aug_ratio, aug_ratio, aug_ratio));
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
-    glm::mat4 finalmat = contract * cropper * rotmat * expand;
+    glm::mat4 finalmat = contract * rotmat * expand;
 
     // now do the sampling
     for (size_t z = 0; z < augmented.depth; z++) {
