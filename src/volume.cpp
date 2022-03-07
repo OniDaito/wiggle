@@ -126,7 +126,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
         std::cout << "Image/ROI " << prefinal.width << ", " << options.roi_xy << std::endl;
-        prefinal = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
+        vkn::ImageU16L3D rotated = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
         /*vkn::ImageF32L3D converted;
         vkn::Convert(prefinal, converted);
         vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);
@@ -145,7 +145,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         } */
 
         //WriteFITS(output_path, flattened);
-        WriteFITS(output_path, prefinal);
+        WriteFITS(output_path, rotated);
         q = RandRot();
         ROTS.push_back(q);
     }
