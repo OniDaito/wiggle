@@ -43,9 +43,8 @@ typedef struct {
     int width = 640;            // The desired dimensions
     int height = 300;
     int stacksize = 51;         // How many stacks in our input 2D image
-    int roi_width = 128;
-    int roi_height = 128;
-    int roi_depth = 25;
+    int roi_xy = 128;           // Square across this dimension
+    int roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
     float depth_scale = 6.2;    // Ratio of Z/Depth to XY
     int num_augs = 1;
@@ -103,24 +102,19 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
+    prefinal = stacked;
 
-    // Perform a resize with nearest neighbour sampling if we have different sizes.
-    if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
-        vkn::ImageU16L3D resized = image::Resize(stacked, options.width, options.height, options.depth);
-        if (options.crop) {
-            // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
-            // that comes later as the mask must match
-            ROI roi_found = FindROI(resized,options.roi_width, options.roi_height, options.roi_depth);
-            roi.x = roi_found.x;
-            roi.y = roi_found.y;
-            roi.z = roi_found.z;
-            vkn::ImageU16L3D cropped = image::Crop(resized, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
-            prefinal = cropped;
-        } else {
-            prefinal = resized;
-        } 
-    } else {
-        prefinal = stacked;
+    if (options.crop) {
+        // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
+        // that comes later as the mask must match
+        int d = int(sqrt(2.0f * options.roi_xy * options.roi_xy));
+
+        // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+        ROI roi_found = FindROI(prefinal, d, d, options.roi_depth);
+        roi.x = roi_found.x;
+        roi.y = roi_found.y;
+        roi.z = roi_found.z;
+        prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, d, d, options.roi_depth);
     }
 
     // Now perform some rotations and save the resulting 2D fits images
@@ -144,6 +138,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 converted.image_data[h][w] = val * 2.0;
             }
         }
+
+        // Perform a resize with nearest neighbour sampling if we have different sizes.
+        if (options.width != stacked.width || options.height != stacked.height) {
+            converted = image::Resize(converted, options.width, options.height);
+        } 
 
         WriteFITS(output_path, converted);
         q = RandRot();
@@ -219,14 +218,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     prefinal = neuron_mask;
 
     if (non_zero(neuron_mask)) {
-
-        // image::SaveTiff(output_path, asi);
-        if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
-            prefinal = image::Resize(neuron_mask, options.width, options.height, options.depth);
-            
-            if (options.crop) {
-                prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, options.roi_width, options.roi_height, options.roi_depth);
-            }
+        if (options.crop) {
+            prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
         }
     }
 
@@ -236,6 +229,11 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
         prefinal = Augment(prefinal, q, options.depth_scale);
+
+        // Perform a resize with nearest neighbour sampling if we have different sizes.
+        if (options.width != prefinal.width || options.height != prefinal.height) {
+            prefinal = image::Resize(prefinal, options.width, options.height);
+        } 
         WriteFITS(output_path, prefinal);
     }
 
@@ -257,7 +255,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbcn:z:w:h:s:j:k:l:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbcn:z:w:h:s:j:l:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -303,10 +301,7 @@ int main (int argc, char ** argv) {
                 options.stacksize = util::FromString<int>(optarg);
                 break;
             case 'j':
-                options.roi_width = util::FromString<int>(optarg);
-                break;
-            case 'k':
-                options.roi_height = util::FromString<int>(optarg);
+                options.roi_xy = util::FromString<int>(optarg);
                 break;
             case 'l':
                 options.roi_depth = util::FromString<int>(optarg);
