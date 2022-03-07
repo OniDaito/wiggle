@@ -74,7 +74,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
             for (size_t x = 0; x < augmented.width; x++) {
                 float fx = static_cast <float>(x);
                 float fy = static_cast <float>(y);
-                float fz = static_cast <float>(z * zscale);
+                float fz = static_cast <float>(z)  * zscale;
 
                 fx = (fx / static_cast <float>(augmented.width) * 2.0) - 1.0;
                 fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
