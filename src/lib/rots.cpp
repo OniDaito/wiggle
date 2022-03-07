@@ -65,7 +65,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, float zscale) {
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
     glm::mat4 finalmat = contract * rotmat * expand;
 
-    float zyratio = static_cast <float>(image.depth) * zscale / static_cast <float>(image.height);
+    float zyratio = static_cast <float>(augmented.depth) * zscale / static_cast <float>(augmented.height);
 
     // now do the sampling
     for (int z = 0; z < augmented.depth; z++) {
