@@ -48,9 +48,15 @@ glm::quat RandRot() {
 
 vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, float zscale) {
     vkn::ImageU16L3D augmented;
-    augmented.width = image.width;
-    augmented.height = image.height;
-    augmented.depth = image.depth;
+    assert(image.width == image.height);
+    int d = int(sqrt((image.width * image.width) / 2.0f));
+    augmented.width = d;
+    augmented.height = d;
+    augmented.depth = d / zscale;
+
+    float aug_ratio_xy = augmented.width / image.width;
+    float aug_ratio_z = augmented.depth / image.depth;
+
     vkn::Alloc(augmented);
     // We expand along the Z depth, rotate, then contract on Z, then we
     // resample and return.
@@ -59,25 +65,28 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, float zscale) {
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
     glm::mat4 finalmat = contract * rotmat * expand;
 
-    float xyratio = static_cast <float>(image.width) / static_cast <float>(image.height);
     float zyratio = static_cast <float>(image.depth) * zscale / static_cast <float>(image.height);
 
     // now do the sampling
-    for (int z = 0; z < image.depth; z++) {
-        for (int y = 0; y < image.height; y++) {
-            for (int x = 0; x < image.width; x++) {
+    for (int z = 0; z < augmented.depth; z++) {
+        for (int y = 0; y < augmented.height; y++) {
+            for (int x = 0; x < augmented.width; x++) {
                 float fx = static_cast <float>(x);
                 float fy = static_cast <float>(y);
                 float fz = static_cast <float>(z);
 
-                fx = ((fx / static_cast <float>(image.width) * 2.0) - 1.0) * xyratio;
-                fy = (fy / static_cast <float>(image.height) * 2.0) - 1.0;
-                fz = ((fz / static_cast <float>(image.depth) * 2.0) - 1.0) * zyratio;
+                fx = ((fx / static_cast <float>(augmented.width) * 2.0) - 1.0);
+                fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
+                fz = ((fz / static_cast <float>(augmented.depth) * 2.0) - 1.0) * zyratio;
+
+                fx = fx * aug_ratio_xy;
+                fy = fy * aug_ratio_xy;
+                fz = fz * aug_ratio_z;
 
                 glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
                 v = finalmat * v;
 
-                int nx = static_cast <int>(((v.x / xyratio) + 1.0) / 2.0 * image.width);
+                int nx = static_cast <int>(((v.x) + 1.0) / 2.0 * image.width);
                 int ny = static_cast <int>((v.y + 1.0) / 2.0 * image.height);
                 int nz = static_cast <int>(((v.z / zyratio) + 1.0) / 2.0 * image.depth);
 
