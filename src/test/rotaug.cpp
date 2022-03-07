@@ -27,7 +27,7 @@ TEST_CASE("Testing ROI crop") {
     quat = glm::rotate(quat, static_cast <float>(M_PI/4.0), glm::vec3(0.0,0,1.0));
     std::cout << "ROT (w,x,y,z): " << quat.w << ", " << quat.x << ", " << quat.y << ", " << quat.z << std::endl;
 
-    test_image0_cropped = Augment(test_image0_cropped, quat, 100, 12, 6.2f);
+    test_image0_cropped = Augment(test_image0_cropped, quat, 100, 6.2f);
     std::string path3("./images/worm3d_augmented.tif");
     image::SaveTiff(path3, test_image0_cropped);
 

@@ -45,28 +45,36 @@ glm::quat RandRot() {
  * Augmentation works by rotating the volume around the origin. We scale 
  * the volume based on the image dimensions and the zscale (as z pixels 
  * often count for 6 times x and y), then we rotate and scale back.
+ * 
+ * The final image is smaller than the input as we rotate a bigger
+ * volume in order to get a more complete rotated final image.
+ * 
  */
 
-vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy, size_t final_depth, float zscale) {
+vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy, float zscale) {
     vkn::ImageU16L3D augmented;
     assert(image.width == image.height);
     assert(final_xy < image.width);
-    assert(final_depth < image.depth);
+    assert(final_xy / zscale < image.depth);
 
+    // Essentially, we want a cube, smaller than the input image.
+    // Z is a special case and requires scaling.
     augmented.width = final_xy;
     augmented.height = final_xy;
-    augmented.depth = final_depth;
+    augmented.depth = final_xy / zscale;
 
-    float aug_ratio_xy = final_xy / image.width;
-    float aug_ratio_z = final_depth / image.depth;
+    std::cout << "Augmenting from / to" << image.width << ", " << image.height << ", " << image.depth << " to " << final_xy << ", " << augmented.depth << std::endl;
+
+    float aug_ratio = final_xy / image.width;
 
     vkn::Alloc(augmented);
     // We expand along the Z depth, rotate, then contract on Z, then we
     // resample and return.
     glm::mat4 rotmat = glm::toMat4(rot);
     glm::mat4 expand = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, zscale));
+    glm::mat4 cropper = glm::scale(glm::mat4(1.0f), glm::vec3(aug_ratio, aug_ratio, aug_ratio));
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
-    glm::mat4 finalmat = contract * rotmat * expand;
+    glm::mat4 finalmat = contract * cropper * rotmat * expand;
 
     // now do the sampling
     for (size_t z = 0; z < augmented.depth; z++) {
@@ -74,22 +82,18 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
             for (size_t x = 0; x < augmented.width; x++) {
                 float fx = static_cast <float>(x);
                 float fy = static_cast <float>(y);
-                float fz = static_cast <float>(z)  * zscale;
+                float fz = static_cast <float>(z);
 
                 fx = (fx / static_cast <float>(augmented.width) * 2.0) - 1.0;
                 fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
-                fz = (fz / static_cast <float>(augmented.depth * zscale) * 2.0) - 1.0;
-
-                /*fx = fx * aug_ratio_xy;
-                fy = fy * aug_ratio_xy;
-                fz = fz * aug_ratio_z;*/
+                fz = (fz / static_cast <float>(augmented.depth) * 2.0) - 1.0;
 
                 glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
                 v = finalmat * v;
 
                 int nx = static_cast <int>((v.x + 1.0) / 2.0 * image.width);
                 int ny = static_cast <int>((v.y + 1.0) / 2.0 * image.height);
-                int nz = static_cast <int>((v.z + 1.0) / 2.0 * (image.depth / zscale));
+                int nz = static_cast <int>((v.z + 1.0) / 2.0 * image.depth);
 
                 if (nx >= 0 && nx < image.width &&
                     ny >= 0 && ny < image.height &&
