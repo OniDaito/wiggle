@@ -125,6 +125,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     for (int i = 0; i < options.num_augs; i++){
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
+        std::cout << "Image/ROI " << prefinal.width << ", " << options.roi_xy << std::endl;
         prefinal = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
         /*vkn::ImageF32L3D converted;
         vkn::Convert(prefinal, converted);
