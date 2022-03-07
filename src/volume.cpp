@@ -131,15 +131,15 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
         prefinal = Augment(prefinal, q, options.depth_scale);
-        vkn::ImageU16L flattened = vkn::Project(prefinal, vkn::ProjectionType::SUM);
-        vkn::ImageF32L converted;
-        vkn::Convert(flattened, converted);
-
+        vkn::ImageF32L3D converted;
+        vkn::Convert(converted, prefinal);
+        vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);
+    
         // Increase the Contrast
-        for (uint32_t h = 0; h < converted.height; h++) {
-            for (uint32_t w = 0; w < converted.width; w++) {
-                float val = converted.image_data[h][w];
-                converted.image_data[h][w] = val * 2.0;
+        for (uint32_t h = 0; h < flattened.height; h++) {
+            for (uint32_t w = 0; w < flattened.width; w++) {
+                float val = flattened.image_data[h][w];
+                flattened.image_data[h][w] = val * 2.0;
             }
         }
 
