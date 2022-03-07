@@ -146,7 +146,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         }
 
         WriteFITS(output_path, converted);
-        glm::quat q = RandRot();
+        q = RandRot();
         ROTS.push_back(q);
     }
 
