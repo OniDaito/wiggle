@@ -26,6 +26,8 @@ typedef struct {
     size_t x;
     size_t y;
     size_t z;
+    size_t xy_dim;
+    size_t depth;
     double sum;
 } ROI;
 

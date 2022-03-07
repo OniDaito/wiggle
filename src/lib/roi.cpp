@@ -18,12 +18,13 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t width, size_t height, size
     roi.y = 0;
     roi.z = 0;
     size_t step_size = 5; // For speed we don't go with 1
+    size_t step_depth = 1; // 1 for depth as it's shorter
     size_t num_threads = 4;
 
     // Lambda function that we will eventually thread
-    auto f = [](masamune::vkn::ImageU16L3D &input, ROI &roi, size_t xs, size_t ys, size_t zs, size_t xe, size_t ye, size_t ze, size_t w, size_t h, size_t d, size_t step_size) {
+    auto f = [](masamune::vkn::ImageU16L3D &input, ROI &roi, size_t xs, size_t ys, size_t zs, size_t xe, size_t ye, size_t ze, size_t w, size_t h, size_t d, size_t step_size, size_t step_depth) {
 
-        for (size_t zi = zs; zi + d - 1 < ze; zi += step_size) {
+        for (size_t zi = zs; zi + d - 1 < ze; zi += step_depth) {
             for (size_t yi = ys; yi + h -1 < ye; yi += step_size) {
                 for (size_t xi = xs; xi + w -1 < xe; xi += step_size) {
                     masamune::vkn::ImageU16L3D cropped = masamune::image::Crop(input, xi, yi, zi, w, h, d);
@@ -49,7 +50,7 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t width, size_t height, size
        
     };
 
-    f(input, roi, 0, 0, 0, input.width, input.height, input.depth, 128, 128, 25, step_size);
+    f(input, roi, 0, 0, 0, input.width, input.height, input.depth, 128, 128, 25, step_size, step_depth);
 
     // Was debating threading this but it's perhaps not worth it :/
     /* std::vector<std::thread> workers;

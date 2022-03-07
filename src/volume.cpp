@@ -85,7 +85,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
-                val = std::max(val - options.cutoff, 0);
+                // val = std::max(val - options.cutoff, 0);
                 stacked.image_data[d][stacked.height - y - 1][x] = val;
             }
         }
@@ -108,13 +108,16 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
         // that comes later as the mask must match
         int d = int(sqrt(2.0f * options.roi_xy * options.roi_xy));
+        int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
 
         // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-        ROI roi_found = FindROI(prefinal, d, d, options.roi_depth);
+        ROI roi_found = FindROI(prefinal, d, d, depth);
         roi.x = roi_found.x;
         roi.y = roi_found.y;
         roi.z = roi_found.z;
-        prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, d, d, options.roi_depth);
+        roi.xy_dim = d;
+        roi.depth = depth;
+        prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     }
 
     // Now perform some rotations and save the resulting 2D fits images
@@ -361,7 +364,7 @@ int main (int argc, char ** argv) {
                             TiffToFits(options, tiff_input, image_idx, roi);
                             std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
                             paired = true;
-                            ProcessTiff(options, tiff_anno, log, image_idx, roi);
+                            // ProcessTiff(options, tiff_anno, log, image_idx, roi);
                             image_idx += 1;
                             break;
                         } catch (const std::exception &e) {
