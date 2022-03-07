@@ -78,7 +78,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
 
                 fx = (fx / static_cast <float>(augmented.width) * 2.0) - 1.0;
                 fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
-                fz = (fz / static_cast <float>(augmented.depth) * 2.0) - 1.0;
+                fz = (fz / static_cast <float>(augmented.depth * zscale) * 2.0) - 1.0;
 
                 /*fx = fx * aug_ratio_xy;
                 fy = fy * aug_ratio_xy;
@@ -89,7 +89,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
 
                 int nx = static_cast <int>((v.x + 1.0) / 2.0 * image.width);
                 int ny = static_cast <int>((v.y + 1.0) / 2.0 * image.height);
-                int nz = static_cast <int>((v.z + 1.0) / 2.0 * image.depth);
+                int nz = static_cast <int>((v.z + 1.0) / 2.0 * (image.depth / zscale));
 
                 if (nx >= 0 && nx < image.width &&
                     ny >= 0 && ny < image.height &&
