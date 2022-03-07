@@ -57,8 +57,8 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
     augmented.height = final_xy;
     augmented.depth = final_depth;
 
-    float aug_ratio_xy = augmented.width / image.width;
-    float aug_ratio_z = augmented.depth / image.depth;
+    float aug_ratio_xy = final_xy / image.width;
+    float aug_ratio_z = final_depth / image.depth;
 
     vkn::Alloc(augmented);
     // We expand along the Z depth, rotate, then contract on Z, then we
@@ -68,19 +68,17 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
     glm::mat4 finalmat = contract * rotmat * expand;
 
-    float zyratio = static_cast <float>(augmented.depth) * zscale / static_cast <float>(augmented.height);
-
     // now do the sampling
     for (size_t z = 0; z < augmented.depth; z++) {
         for (size_t y = 0; y < augmented.height; y++) {
             for (size_t x = 0; x < augmented.width; x++) {
                 float fx = static_cast <float>(x);
                 float fy = static_cast <float>(y);
-                float fz = static_cast <float>(z);
+                float fz = static_cast <float>(z * zscale);
 
-                fx = ((fx / static_cast <float>(augmented.width) * 2.0) - 1.0);
+                fx = (fx / static_cast <float>(augmented.width) * 2.0) - 1.0;
                 fy = (fy / static_cast <float>(augmented.height) * 2.0) - 1.0;
-                fz = ((fz / static_cast <float>(augmented.depth) * 2.0) - 1.0) * zyratio;
+                fz = (fz / static_cast <float>(augmented.depth) * 2.0) - 1.0;
 
                 /*fx = fx * aug_ratio_xy;
                 fy = fy * aug_ratio_xy;
@@ -89,9 +87,9 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
                 glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
                 v = finalmat * v;
 
-                int nx = static_cast <int>(((v.x) + 1.0) / 2.0 * image.width);
+                int nx = static_cast <int>((v.x + 1.0) / 2.0 * image.width);
                 int ny = static_cast <int>((v.y + 1.0) / 2.0 * image.height);
-                int nz = static_cast <int>(((v.z / zyratio) + 1.0) / 2.0 * image.depth);
+                int nz = static_cast <int>((v.z + 1.0) / 2.0 * image.depth);
 
                 if (nx >= 0 && nx < image.width &&
                     ny >= 0 && ny < image.height &&
