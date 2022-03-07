@@ -65,7 +65,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
 
     std::cout << "Augmenting from / to" << image.width << ", " << image.height << ", " << image.depth << " to " << final_xy << ", " << augmented.depth << std::endl;
 
-    float aug_ratio = final_xy / image.width;
+    float aug_ratio = static_cast<float>(final_xy) / static_cast<float>(image.width);
 
     vkn::Alloc(augmented);
     // We expand along the Z depth, rotate, then contract on Z, then we
@@ -74,7 +74,7 @@ vkn::ImageU16L3D Augment(vkn::ImageU16L3D &image, glm::quat rot, size_t final_xy
     glm::mat4 expand = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, zscale));
     glm::mat4 cropper = glm::scale(glm::mat4(1.0f), glm::vec3(aug_ratio, aug_ratio, aug_ratio));
     glm::mat4 contract = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0 / zscale));
-    glm::mat4 finalmat = contract * rotmat * expand;
+    glm::mat4 finalmat = contract * cropper * rotmat * expand;
 
     // now do the sampling
     for (size_t z = 0; z < augmented.depth; z++) {
