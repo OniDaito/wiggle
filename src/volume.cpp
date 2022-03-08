@@ -116,7 +116,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     roi.x = roi_found.x * 2;
     roi.y = roi_found.y * 2;
     roi.z = roi_found.z * 2; 
-    roi.xy_dim = d * 2;
+    roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = depth * 2;
     prefinal = image::Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
