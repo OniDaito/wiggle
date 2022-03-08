@@ -19,9 +19,20 @@ TEST_CASE("Testing ROI crop") {
     int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
     int depth = static_cast<int>(ceil(static_cast<float>(d) / zratio));
     
+
+    vkn::ImageU16L3D half = image::Resize(test_image0, test_image0.width / 2, test_image0.height/ 2, test_image0.depth/ 2);
     // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ROI roi_found = FindROI(test_image0, d, depth);
+    ROI roi_found = FindROI(half, d / 2, depth / 2);
+    
+    roi_found.depth *= 2;
+    roi_found.x *= 2;
+    roi_found.y *= 2;
+    roi_found.z *= 2;
+    roi_found.xy_dim *=2;
+
     std::cout << "ROI (x,y,z,wh,d,sum): " << roi_found.x << ", " << roi_found.y << ", " << roi_found.z << ", " << d << ", " << depth << ", " << roi_found.sum << std::endl;
+
+    // Double up the ROI again
 
     vkn::ImageU16L3D cropped = image::Crop(test_image0, roi_found.x, roi_found.y, roi_found.z, d, d, depth);
     CHECK(cropped.width == d);

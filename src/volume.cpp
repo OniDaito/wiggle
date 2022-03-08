@@ -101,7 +101,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
+    // Find ROI on a half-sized image as it's much faster.
     prefinal = stacked;
+    prefinal = image::Resize(stacked, stacked.width / 2, stacked.height/ 2, stacked.depth/ 2);
 
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
     // that comes later as the mask must match
@@ -109,13 +111,20 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
 
     // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ROI roi_found = FindROI(prefinal, d, depth);
-    roi.x = roi_found.x;
-    roi.y = roi_found.y;
-    roi.z = roi_found.z;
+    ROI roi_found = FindROI(prefinal, d / 2, depth / 2);
+    roi.x = roi_found.x * 2;
+    roi.y = roi_found.y * 2;
+    roi.z = roi_found.z * 2; 
     roi.xy_dim = d;
     roi.depth = depth;
     prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+
+    // Do some contrast work
+    vkn::ImageF32L3D converted;
+    vkn::Convert(prefinal, converted);
+
+    std::function<float(float)> contrast = [](float x) { return x * x; };
+    vkn::ImageF32L3D contrasted = vkn::ApplyFunc(converted, contrast);
     
     // Now perform some rotations and save the resulting 2D fits images
     ROTS.clear();
@@ -123,28 +132,20 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     ROTS.push_back(q);
 
     for (int i = 0; i < options.num_augs; i++){
+        // Rotate, normalise then sum projection
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        vkn::ImageU16L3D rotated = Augment(prefinal, q, options.roi_xy, options.depth_scale);
-        /*vkn::ImageF32L3D converted;
-        vkn::Convert(prefinal, converted);
-        vkn::ImageF32L flattened = vkn::Project(converted, vkn::ProjectionType::SUM);
-    
-        // Increase the Contrast
-        for (uint32_t h = 0; h < flattened.height; h++) {
-            for (uint32_t w = 0; w < flattened.width; w++) {
-                float val = flattened.image_data[h][w];
-                flattened.image_data[h][w] = val * 2.0;
-            }
-        }
+        vkn::ImageF32L3D rotated = Augment(contrasted, q, options.roi_xy, options.depth_scale);
+        vkn::ImageF32L3D normalised = image::Normalise(rotated);
+        vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         if (options.width != stacked.width || options.height != stacked.height) {
-            flattened = image::Resize(flattened, options.width, options.height);
-        } */
+            summed = image::Resize(summed, options.width, options.height);
+        } 
 
         //WriteFITS(output_path, flattened);
-        WriteFITS(output_path, rotated);
+        WriteFITS(output_path, summed);
         q = RandRot();
         ROTS.push_back(q);
     }
