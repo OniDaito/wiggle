@@ -2,6 +2,7 @@
 #include "test/doctest.h"
 #include "volume.hpp"
 #include "rots.hpp"
+#include "image.hpp"
 
 using namespace masamune;
 
@@ -9,30 +10,64 @@ TEST_CASE("Testing ROI crop") {
     vkn::ImageU16L3D test_image0;
     std::string path0("./images/worm3d.tif");
     image::LoadTiff(path0, test_image0);
-    CHECK(test_image0.width == 320);
-    CHECK(test_image0.height == 150);
+    CHECK(test_image0.width == 640);
+    CHECK(test_image0.height == 300);
 
-    ROI roi = FindROI(test_image0, 128, 25);
-    std::cout << "ROI (x,y,z,sum): " << roi.x << ", " << roi.y << ", " << roi.z << ", " << roi.sum << std::endl;
+    int roi_size = 200;
+    float zratio = 6.2f;
+    float half_roi = static_cast<float>(roi_size) / 2.0;
+    int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
+    int depth = static_cast<int>(ceil(static_cast<float>(d) / zratio));
+    
+    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+    ROI roi_found = FindROI(test_image0, d, depth);
+    std::cout << "ROI (x,y,z,wh,d,sum): " << roi_found.x << ", " << roi_found.y << ", " << roi_found.z << ", " << d << ", " << depth << ", " << roi_found.sum << std::endl;
 
-    vkn::ImageU16L3D test_image0_cropped = image::Crop(test_image0, roi.x, roi.y, roi.z, 128, 128, 25);
-    CHECK(test_image0_cropped.width == 128);
-    CHECK(test_image0_cropped.height == 128);
+    vkn::ImageU16L3D cropped = image::Crop(test_image0, roi_found.x, roi_found.y, roi_found.z, d, d, depth);
+    CHECK(cropped.width == d);
+    CHECK(cropped.height == d);
 
-    std::string path1("./images/worm3d_cropped.tif");
-    image::SaveTiff(path1, test_image0_cropped);
+    uint16_t min_val = image::Min(cropped);
 
-    //glm::quat quat = RandRot();
-    glm::quat quat = glm::quat(1.0,0,0,0);
-    quat = glm::rotate(quat, static_cast <float>(M_PI/4.0), glm::vec3(0.0,0,1.0));
-    std::cout << "ROT (w,x,y,z): " << quat.w << ", " << quat.x << ", " << quat.y << ", " << quat.z << std::endl;
+    uint16_t min, max;
+    image::MinMax(cropped, min, max);
+    std::cout << "Min / Max " << min << ", " << max << std::endl;
 
-    test_image0_cropped = Augment(test_image0_cropped, quat, 100, 6.2f);
-    std::string path3("./images/worm3d_augmented.tif");
-    image::SaveTiff(path3, test_image0_cropped);
+    std::string path_crop("./images/worm3d_cropped.tif");
+    image::SaveTiff(path_crop, cropped);
 
-    vkn::ImageU16L test_image0_final = vkn::Project(test_image0_cropped, vkn::ProjectionType::SUM);
-    std::string path2("./images/worm_augmented.tif");
-    image::SaveTiff(path2, test_image0_final);
+    vkn::ImageF32L3D converted;
+    vkn::Convert(cropped, converted);
+
+    std::function<float(float)> contrast = [](float x) { return x * x; };
+    vkn::ImageF32L3D contrasted = vkn::ApplyFunc(converted, contrast);
+
+    float fmin, fmax;
+    image::MinMax(contrasted, fmin, fmax);
+    std::cout << "Contrasted Min / Max " << fmin << ", " << fmax << std::endl;
+
+    glm::quat quat = RandRot();
+    //glm::quat quat = glm::quat(1.0,0,0,0);
+    //quat = glm::rotate(quat, static_cast <float>(M_PI/4.0), glm::vec3(0.0,0,1.0));
+    //std::cout << "ROT (w,x,y,z): " << quat.w << ", " << quat.x << ", " << quat.y << ", " << quat.z << std::endl;
+
+    vkn::ImageF32L3D augmented = Augment(contrasted, quat, roi_size, zratio);
+    vkn::ImageF32L3D normalised = image::Normalise(augmented);
+
+    image::MinMax(normalised, fmin, fmax);
+    std::cout << "Min / Max " << fmin << ", " << fmax << std::endl;
+    assert(fmin == 0.0f);
+    assert(fmax == 1.0f);
+
+    std::string path_aug3d("./images/worm3d_augmented.fits");
+    WriteFITS(path_aug3d, normalised);
+
+    vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
+    std::string path_aug("./images/worm_augmented.fits");
+    WriteFITS(path_aug, summed);
+
+    vkn::ImageF32L mipped = vkn::Project(normalised, vkn::ProjectionType::MAX_INTENSITY);
+    std::string path_mip("./images/worm_augmented_mip.fits");
+    WriteFITS(path_mip, mipped);
 
 }

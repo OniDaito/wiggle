@@ -224,7 +224,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         glm::quat q = ROTS[i];
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
-        prefinal = Augment(prefinal, q, options.roi_xy, options.roi_depth, options.depth_scale);
+        prefinal = Augment(prefinal, q, options.roi_xy, options.depth_scale);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
