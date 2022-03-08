@@ -107,16 +107,17 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
     // that comes later as the mask must match
-    int d = int(sqrt(2.0f * options.roi_xy * options.roi_xy));
-    int depth = int(static_cast<float>(d) / static_cast<float>(options.depth_scale));
+    float half_roi = static_cast<float>(options.roi_xy ) / 2.0;
+    int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
+    int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
 
     // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
     ROI roi_found = FindROI(prefinal, d / 2, depth / 2);
     roi.x = roi_found.x * 2;
     roi.y = roi_found.y * 2;
     roi.z = roi_found.z * 2; 
-    roi.xy_dim = d;
-    roi.depth = depth;
+    roi.xy_dim = d * 2;
+    roi.depth = depth * 2;
     prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Do some contrast work
@@ -252,7 +253,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbcn:z:w:h:s:j:l:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbn:z:w:h:s:j:l:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
