@@ -140,10 +140,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         vkn::ImageF32L3D normalised = image::Normalise(rotated);
         vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
 
+        // TODO - there is a bug in float resize. Not sure why!
         // Perform a resize with nearest neighbour sampling if we have different sizes.
-        if (options.width != summed.width || options.height != summed.height) {
-            summed = image::Resize(summed, options.width, options.height);
-        } 
+        //if (options.width != summed.width || options.height != summed.height) {
+        //    summed = image::Resize(summed, options.width, options.height);
+        //} 
 
         //WriteFITS(output_path, flattened);
         WriteFITS(output_path, summed);
