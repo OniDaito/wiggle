@@ -122,7 +122,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     // Do some contrast work
     vkn::ImageF32L3D converted;
-    vkn::Convert(prefinal, converted);
+    image::Convert(prefinal, converted);
 
     std::function<float(float)> contrast = [](float x) { return x * x; };
     vkn::ImageF32L3D contrasted = vkn::ApplyFunc(converted, contrast);

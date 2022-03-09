@@ -48,7 +48,9 @@ TEST_CASE("Testing ROI crop") {
     image::SaveTiff(path_crop, cropped);
 
     vkn::ImageF32L3D converted;
-    vkn::Convert(cropped, converted);
+    image::Convert(cropped, converted);
+    std::string path_converted("./images/worm3d_converted.fits");
+    WriteFITS(path_converted, converted);
 
     std::function<float(float)> contrast = [](float x) { return x * x; };
     vkn::ImageF32L3D contrasted = vkn::ApplyFunc(converted, contrast);
@@ -58,9 +60,6 @@ TEST_CASE("Testing ROI crop") {
     std::cout << "Contrasted Min / Max " << fmin << ", " << fmax << std::endl;
 
     glm::quat quat = RandRot();
-    //glm::quat quat = glm::quat(1.0,0,0,0);
-    //quat = glm::rotate(quat, static_cast <float>(M_PI/4.0), glm::vec3(0.0,0,1.0));
-    //std::cout << "ROT (w,x,y,z): " << quat.w << ", " << quat.x << ", " << quat.y << ", " << quat.z << std::endl;
 
     vkn::ImageF32L3D augmented = Augment(contrasted, quat, roi_size, zratio);
     vkn::ImageF32L3D normalised = image::Normalise(augmented);
@@ -77,8 +76,35 @@ TEST_CASE("Testing ROI crop") {
     std::string path_aug("./images/worm_augmented.fits");
     WriteFITS(path_aug, summed);
 
+    std::string path_jpg("./images/worm_augmented.jpg");
+    image::Save(path_jpg, summed);
+
     vkn::ImageF32L mipped = vkn::Project(normalised, vkn::ProjectionType::MAX_INTENSITY);
     std::string path_mip("./images/worm_augmented_mip.fits");
     WriteFITS(path_mip, mipped);
+
+    // Do some rotation animations
+    int num_frames = 360;
+
+    for (int i = 0; i < num_frames; i++) {
+        std::string aug = util::IntToStringLeadingZeroes(i, 5);
+        std::string path_jpg("./images/anim/worm_" + aug + ".jpg");
+
+        glm::quat qrot = glm::quat(1.0,0,0,0);
+        float angle = static_cast<float>(i) / static_cast<float>(num_frames) * M_PI * 2.0;
+        qrot = glm::rotate(qrot, angle, glm::vec3(0.0,0.0,1.0));
+        qrot = glm::rotate(qrot, angle, glm::vec3(0.0,1.0,0.0));
+        qrot = glm::rotate(qrot, angle, glm::vec3(1.0,0.0,0.0));
+
+        vkn::ImageF32L3D augmented = Augment(contrasted, qrot, roi_size, zratio);
+        vkn::ImageF32L3D normalised = image::Normalise(augmented);
+        vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
+        vkn::ImageU8L converted;
+        image::Convert(summed, converted);
+        
+        std::cout << "Writing frame " << aug << std::endl;
+
+        image::Save(path_jpg, converted);
+    }
 
 }

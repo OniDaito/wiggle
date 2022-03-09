@@ -155,7 +155,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
                 if (options.flatten){
                     vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::SUM);
                     vkn::ImageF32L converted;
-                    vkn::Convert(flattened, converted);
+                    image::Convert(flattened, converted);
 
                     // Increase the Contrast
                     for (uint32_t h = 0; h < converted.height; h++) {

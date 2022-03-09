@@ -96,15 +96,48 @@ T Augment(T &image, glm::quat rot, size_t cube_dim, float zscale) {
                 glm::vec4 v = glm::vec4(fx * aug_ratio, fy * aug_ratio, fz * aug_ratio, 1.0);
                 v = rotmat * v;
 
-                int nx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
-                int ny = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
-                int nz = static_cast <int>((v.z + 1.0) / 2.0 * resampled.depth);
+                // Now perform subpixel sampling
+                float ffx = floor(v.x);
+                float ffy = floor(v.y);
+                float ffz = floor(v.z);
 
-                if (nx >= 0 && nx < resampled.width &&
-                    ny >= 0 && ny < resampled.height &&
-                    nz >= 0 && nz < resampled.depth) {
-                    augmented.image_data[z][y][x] = resampled.image_data[nz][ny][nx];
+                float gx = v.x - ffx;
+                float gy = v.y - ffy;
+                float gz = v.z - ffz;
+
+                int cx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
+                int cy = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
+                int cz = static_cast <int>((v.z + 1.0) / 2.0 * resampled.depth);
+
+                // 27 samples so get values for all - left to right, top to bottom, front to back
+                float val = 0;
+
+                for (int dz = -1; dz < 2; dz++) {
+                    for (int dy = -1; dy < 2; dy++) {
+                        for (int dx = -1; dx < 2; dx++) {
+                            
+                            int rx = cx + dx;
+                            int ry = cy + dy;
+                            int rz = cz + dz;
+
+                            float ddx = 0.5 + static_cast<float>(dx) - gx;
+                            float ddy = 0.5 + static_cast<float>(dy) - gy;
+                            float ddz = 0.5 + static_cast<float>(dz) - gz;
+                            
+                            float dist = sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+
+                            if (dist < 1.0) {
+                                if (rx >= 0 && rx < resampled.width &&
+                                ry >= 0 && ry < resampled.height &&
+                                rz >= 0 && rz < resampled.depth) {
+                                    val += static_cast<float>(resampled.image_data[rz][ry][rx]) * (1.0 - dist);
+                                }
+                            }
+                        }
+                    }
                 }
+
+                augmented.image_data[z][y][x] = val;
             }
         }
     }
