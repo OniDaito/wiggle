@@ -32,5 +32,6 @@ typedef struct {
 } ROI;
 
 ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth);
+ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth);
 
 #endif

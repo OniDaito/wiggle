@@ -4,6 +4,7 @@
 /**
  * 
  * Find ROI. Use the basic image, moving the ROI around to get the bit we want.
+ * 
  * @param input - a 3D image
  * @param width - ROI width
  * @param height - ROI height
@@ -106,6 +107,69 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
             roi = troi;
         }
     }
+
+    return roi;
+}
+
+
+
+/**
+ * 
+ * Find ROI. Use the basic image, moving the ROI around to get the bit we want.
+ * 
+ * Unlike the one above, we look for our 4 hotspots and keep them centered.
+ * 
+ * @param input - a 3D image
+ * @param width - ROI width
+ * @param height - ROI height
+ * @param depth - ROI depth
+ * 
+ * @return an ROI struct
+ */
+
+typedef struct {
+    uint16_t val;
+    size_t x, y, z;
+} FourCoord;
+
+bool CompareFour(FourCoord i1, FourCoord i2) {
+    return (i1.val < i2.val);
+}
+
+ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
+    size_t step_size = 5; // For speed we don't go with 1
+    size_t step_depth = 1; // 1 for depth as it's shorter
+
+    // Lambda function that we will eventually thread
+    ROI roi;
+    roi.xy_dim = xy;
+    roi.depth = depth;
+    std::deque<FourCoord> top_four;
+
+    for (size_t z = 0; z < input.depth; z += step_depth) {
+        for (size_t y = 0; y < input.height; y += step_size) {
+            for (size_t x = 0; x < input.width; x += step_size) {
+                uint16_t val = input.image_data[z][y][x];
+                
+                if (top_four.size() < 4){
+                    FourCoord f = {val, x, y, z};
+                    top_four.push_back(f);
+                    std::sort(top_four.begin(), top_four.end(), CompareFour);
+                } else {
+                    if (val > top_four[0].val) {
+                        FourCoord f = {val, x, y, z};
+                        top_four.pop_front();
+                        top_four.push_back(f);
+                        std::sort(top_four.begin(), top_four.end(), CompareFour);
+                    }  
+                }
+            }
+        }
+    }
+
+    roi.x = static_cast<size_t>((top_four[0].x + top_four[1].x + top_four[2].x + top_four[3].x) / 4 - xy/2);
+    roi.y = static_cast<size_t>((top_four[0].y + top_four[1].y + top_four[2].y + top_four[3].y) / 4 - xy/2);
+    roi.z = static_cast<size_t>((top_four[0].z + top_four[1].z + top_four[2].z + top_four[3].z) / 4 - depth/2);
 
     return roi;
 }

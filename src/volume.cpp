@@ -112,7 +112,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
 
     // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ROI roi_found = FindROI(prefinal, d / 2, depth / 2);
+    ROI roi_found = FindROICentred(prefinal, d / 2, depth / 2);
     roi.x = roi_found.x * 2;
     roi.y = roi_found.y * 2;
     roi.z = roi_found.z * 2; 
@@ -139,6 +139,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         vkn::ImageF32L3D rotated = Augment(contrasted, q, options.roi_xy, options.depth_scale);
         vkn::ImageF32L3D normalised = image::Normalise(rotated);
         vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
+        summed = vkn::ApplyFunc(summed, contrast);
 
         // TODO - there is a bug in float resize. Not sure why!
         // Perform a resize with nearest neighbour sampling if we have different sizes.
