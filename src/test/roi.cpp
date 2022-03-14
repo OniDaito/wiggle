@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "test/doctest.h"
-#include "multiset.hpp"
+#include "roi.hpp"
 
 using namespace masamune;
 

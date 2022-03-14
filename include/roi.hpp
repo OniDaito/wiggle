@@ -1,5 +1,5 @@
-#ifndef __MULTISET_H__
-#define __MULTISET_H__
+#ifndef __ROI_H__
+#define __ROI_H__
 
 /**
  * @file multiset.h

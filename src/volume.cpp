@@ -255,7 +255,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbn:z:w:h:s:j:l:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbn:z:w:h:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -299,9 +299,6 @@ int main (int argc, char ** argv) {
                 break;
             case 'j':
                 options.roi_xy = util::FromString<int>(optarg);
-                break;
-            case 'l':
-                options.roi_depth = util::FromString<int>(optarg);
                 break;
             case 'q':
                 options.num_augs = util::FromString<int>(optarg);

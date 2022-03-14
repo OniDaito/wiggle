@@ -27,7 +27,7 @@ The build commands are as follows:
 
 For a faster release build:
 
-    meson setup --buildtype release release
+    meson setup --buildtype=release release
     ninja -C release
 
 ## Running

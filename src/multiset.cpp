@@ -23,7 +23,7 @@
  *
  */
 
-#include "multiset.hpp"
+#include "roi.hpp"
 #include "image.hpp"
 #include "data.hpp"
 #include "threadpool.hpp"

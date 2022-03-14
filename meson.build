@@ -8,6 +8,11 @@ if get_option('buildtype') == 'debug'
   add_global_arguments('-DDEBUG', language : 'cpp')
 endif
 
+if get_option('buildtype') == 'release'
+  add_global_arguments('-O3', language : 'cpp')
+endif
+
+
 project_dir  = meson.current_source_dir() # MESON_SOURCE_ROOT
 compiler = meson.get_compiler('cpp')
 

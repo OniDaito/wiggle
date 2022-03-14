@@ -1,4 +1,4 @@
-#include "multiset.hpp"
+#include "roi.hpp"
 #include "threadpool.hpp"
 
 /**
@@ -128,7 +128,7 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
  */
 
 typedef struct {
-    uint16_t val;
+    float val;
     size_t x, y, z;
 } FourCoord;
 
@@ -152,7 +152,7 @@ ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
                 uint16_t val = input.image_data[z][y][x];
                 
                 if (top_four.size() < 4){
-                    FourCoord f = {val, x, y, z};
+                    FourCoord f = {static_cast<float>(val), x, y, z};
                     top_four.push_back(f);
                     std::sort(top_four.begin(), top_four.end(), CompareFour);
                 } else {
@@ -167,9 +167,28 @@ ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
         }
     }
 
-    roi.x = static_cast<size_t>((top_four[0].x + top_four[1].x + top_four[2].x + top_four[3].x) / 4 - xy/2);
-    roi.y = static_cast<size_t>((top_four[0].y + top_four[1].y + top_four[2].y + top_four[3].y) / 4 - xy/2);
-    roi.z = static_cast<size_t>((top_four[0].z + top_four[1].z + top_four[2].z + top_four[3].z) / 4 - depth/2);
+    roi.x = static_cast<size_t>(std::max( ((top_four[0].x + top_four[1].x + top_four[2].x + top_four[3].x) / 4.0f - static_cast<float>(xy) / 2.0f), 0.0f));
+    roi.y = static_cast<size_t>(std::max( ((top_four[0].y + top_four[1].y + top_four[2].y + top_four[3].y) / 4.0f - static_cast<float>(xy) / 2.0f), 0.0f));
+    roi.z = 0;
+    
+    if (depth < input.depth) {
+        roi.z = static_cast<size_t>(std::max( ((top_four[0].z + top_four[1].z + top_four[2].z + top_four[3].z) / 4.0f - static_cast<float>(depth) / 2.0f), 0.0f));
+    }
+    
+    //std::cout << "Input " << input.width << ", " << input.height << ", " << input.depth << std::endl;
+    //std::cout << "ROI " << roi.x << ", " << roi.y << ", " << roi.z << ", " << xy << ", " << depth << std::endl;
+
+    if (roi.x + xy >= input.width) {
+        roi.x = roi.x - (roi.x + xy - input.width + 1);
+    }
+    if (roi.y + xy >= input.height) {
+        roi.y = roi.y - (roi.y + xy - input.height + 1);
+    }
+    if (roi.z + depth >= input.depth) {
+        roi.z = roi.z - (roi.z + depth - input.depth + 1);
+    }
+
+    //std::cout << "ROI adjusted " << roi.x << ", " << roi.y << ", " << roi.z << ", " << xy << ", " << depth << std::endl;
 
     return roi;
 }
