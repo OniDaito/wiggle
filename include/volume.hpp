@@ -16,6 +16,7 @@
 #include <masamune/util/file.hpp>
 #include <masamune/image/tiff.hpp>
 #include <masamune/image/basic.hpp>
+#include <masamune/image/convert.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>

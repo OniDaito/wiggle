@@ -98,5 +98,11 @@ test_rotaug = executable('test_rotaug',
   dependencies : [masamune, cfits],
   link_with : wiggle)
 
+test_deconv = executable('test_deconv',
+  'src/test/deconv.cpp',
+  include_directories : include_dirs,
+  dependencies : [masamune, cfits],
+  link_with : wiggle)
+
 test('Basic Test', test_basic)
 #test('ROI Test', test_roi)

@@ -54,6 +54,30 @@ using namespace masamune;
 // A fixed set of augmentation directions
 std::vector<glm::quat> ROTS;
 
+
+vkn::ImageF32L GenKernel(float sigma, size_t &padding){
+    // Create our gauss kernel with a guess at 10 sigma
+    vkn::ImageF32L gauss_kernel;
+    size_t gw = static_cast<size_t>(sigma * 2.0 - 1.0);
+    padding = (gw - 1) / 2;
+    gauss_kernel.width = gw;
+    gauss_kernel.height = gw;
+    vkn::Alloc(gauss_kernel);
+
+    for (size_t y = 0; y < gw; y ++) {
+        for (size_t x = 0; x < gw; x ++) {
+            float xf = static_cast<float>(x);
+            float yf = static_cast<float>(y);
+            float xx = xf * xf;
+            float yy = yf * yf;
+
+            float g = (1.0f / (sigma * sigma * 2.0 * M_PI)) * exp(-( xx + yy) / (2.0f*sigma*sigma) ); 
+            gauss_kernel.image_data[y][x] = g;
+        }
+    }
+    return gauss_kernel;
+}
+
 /**
  * Given a tiff file return the same file but with one channel and 
  * as a series of layers
@@ -74,6 +98,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     stacked.height = image.height / (stacked.depth * options.channels); // Two channels
     vkn::Alloc(stacked);
     uint coff = 0;
+    size_t padding = 0;
+    vkn::ImageF32L kernel = GenKernel(10.0f, padding);
 
     if (options.bottom) {
         coff = stacked.height;
@@ -120,26 +146,53 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     roi.depth = roi_found.depth * 2;
     prefinal = image::Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
-    // Do some contrast work
+    // Convert to float as we need to do some operations
     vkn::ImageF32L3D converted;
     image::Convert(prefinal, converted);
 
-    std::function<float(float)> contrast = [](float x) { return x * x; };
-    vkn::ImageF32L3D contrasted = vkn::ApplyFunc(converted, contrast);
-    
-    // Now perform some rotations and save the resulting 2D fits images
+    // Deconvolve 
+    vkn::ImageF32L3D gauss_stack;
+    gauss_stack.width = converted.width;
+    gauss_stack.height = converted.height;
+    gauss_stack.depth = converted.depth;
+    vkn::Alloc(gauss_stack);
+
+    /*vkn::ImageF32L first_slice = vkn::Slice(converted, 0);
+    vkn::Sandwich(gauss_stack, first_slice, 0);
+    vkn::ImageF32L last_slice = vkn::Slice(converted, converted.depth - 1);
+    vkn::Sandwich(gauss_stack, last_slice, converted.depth - 1);*/
+
+    std::function<float(float)> bythree = [](float x) { return x * 3; };
+    std::function<float(float)> remove_noise = [](float x) { return std::max(x - 270.0f, 0.0f); };
+
+
+    for (size_t d = 1; d < converted.depth - 1; d++) {
+        vkn::ImageF32L top_slice = vkn::ApplyFunc(vkn::Slice(converted, d - 1 ), remove_noise);
+        vkn::ImageF32L bottom_slice = vkn::ApplyFunc(vkn::Slice(converted, d + 1 ), remove_noise);
+        vkn::ImageF32L current_slice = vkn::ApplyFunc(vkn::ApplyFunc(vkn::Slice(converted, d), remove_noise), bythree);
+        vkn::ImageF32L top_gauss = image::Convolve(top_slice, kernel, 1, padding, image::PaddingType::ZEROS);
+        vkn::ImageF32L bottom_gauss = image::Convolve(bottom_slice, kernel, 1, padding, image::PaddingType::ZEROS);
+        current_slice = image::Sub(current_slice, top_gauss);
+        current_slice = image::Sub(current_slice, bottom_gauss);
+        vkn::Sandwich(gauss_stack, current_slice, d);
+    }
+
+  
+    // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     ROTS.clear();
     glm::quat q(1.0,0,0,0);
     ROTS.push_back(q);
+    std::function<float(float)> contrast = [](float x) { return x * x; };
 
     for (int i = 0; i < options.num_augs; i++){
         // Rotate, normalise then sum projection
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        vkn::ImageF32L3D rotated = Augment(contrasted, q, options.roi_xy, options.depth_scale);
-        vkn::ImageF32L3D normalised = image::Normalise(rotated);
-        vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
-        summed = vkn::ApplyFunc(summed, contrast);
+        vkn::ImageF32L3D rotated = Augment(gauss_stack, q, options.roi_xy, options.depth_scale);
+        vkn::ImageF32L summed = vkn::Project(rotated, vkn::ProjectionType::SUM);
+        vkn::ImageF32L normalised = image::Normalise(summed);
+        vkn::ImageF32L contrasted = vkn::ApplyFunc(normalised, contrast);
+        vkn::ImageF32L renormalised = image::Normalise(contrasted);
 
         // TODO - there is a bug in float resize. Not sure why!
         // Perform a resize with nearest neighbour sampling if we have different sizes.
@@ -148,7 +201,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         //} 
 
         //WriteFITS(output_path, flattened);
-        WriteFITS(output_path, summed);
+        WriteFITS(output_path, renormalised);
         q = RandRot();
         ROTS.push_back(q);
     }

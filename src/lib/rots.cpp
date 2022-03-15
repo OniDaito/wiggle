@@ -17,6 +17,7 @@
 using namespace masamune;
 
 glm::quat RandRot() {
+    // Multiply by 0.25 to keep the rotations small
     srand(time(NULL));
     float u1 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
     float u2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
