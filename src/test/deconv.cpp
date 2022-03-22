@@ -54,13 +54,14 @@ TEST_CASE("Testing Deconvolution 3D") {
     CHECK(worm_raw.depth == 51);
     
     vkn::ImageU16L3D worm_resized = image::Resize(worm_raw, 320, 150, 25);
-    vkn::ImageU16L3D worm_croppped = image::Crop(worm_raw, 10, 10, 13,  150, 150, 25);
-    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(worm_croppped);
+    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(worm_resized);
 
     // Convolve with a known PSF
     std::string path_kernel("./images/PSF.tif");
     vkn::ImageF32L3D kernel = image::LoadTiff<vkn::ImageF32L3D>(path_kernel);
-    vkn::ImageF32L3D deconved = image::Deconvolve(converted, kernel, 10);
+    vkn::ImageF32L3D kernel_resized = image::Resize(kernel, 33, 33, 13);
+
+    vkn::ImageF32L3D deconved = image::Deconvolve(converted, kernel_resized, 5);
 
     std::string path_cont("./images/test/worm_deconved_3d.fits");
     WriteFITS(path_cont, deconved);
