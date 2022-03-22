@@ -104,5 +104,11 @@ test_deconv = executable('test_deconv',
   dependencies : [masamune, cfits],
   link_with : wiggle)
 
+test_deconv_stack = executable('test_deconv_stack',
+  'src/test/deconv_stack.cpp',
+  include_directories : include_dirs,
+  dependencies : [masamune, cfits],
+  link_with : wiggle)
+
 test('Basic Test', test_basic)
 #test('ROI Test', test_roi)

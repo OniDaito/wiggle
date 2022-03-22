@@ -54,30 +54,6 @@ using namespace masamune;
 // A fixed set of augmentation directions
 std::vector<glm::quat> ROTS;
 
-
-vkn::ImageF32L GenKernel(float sigma, size_t &padding){
-    // Create our gauss kernel with a guess at 10 sigma
-    vkn::ImageF32L gauss_kernel;
-    size_t gw = static_cast<size_t>(sigma * 2.0 - 1.0);
-    padding = (gw - 1) / 2;
-    gauss_kernel.width = gw;
-    gauss_kernel.height = gw;
-    vkn::Alloc(gauss_kernel);
-
-    for (size_t y = 0; y < gw; y ++) {
-        for (size_t x = 0; x < gw; x ++) {
-            float xf = static_cast<float>(x);
-            float yf = static_cast<float>(y);
-            float xx = xf * xf;
-            float yy = yf * yf;
-
-            float g = (1.0f / (sigma * sigma * 2.0 * M_PI)) * exp(-( xx + yy) / (2.0f*sigma*sigma) ); 
-            gauss_kernel.image_data[y][x] = g;
-        }
-    }
-    return gauss_kernel;
-}
-
 /**
  * Given a tiff file return the same file but with one channel and 
  * as a series of layers
@@ -89,17 +65,14 @@ vkn::ImageF32L GenKernel(float sigma, size_t &padding){
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
-    vkn::ImageU16L image;
-    vkn::ImageU16L3D stacked;
     vkn::ImageU16L3D prefinal;
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
-    stacked.width = image.width;
-    stacked.depth = options.stacksize;
-    stacked.height = image.height / (stacked.depth * options.channels); // Two channels
-    vkn::Alloc(stacked);
+    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    vkn::ImageU16L3D stacked(image.width, image.height / (stacked.depth * options.channels), options.stacksize);
     uint coff = 0;
-    size_t padding = 0;
-    vkn::ImageF32L kernel = GenKernel(10.0f, padding);
+    size_t gw = 9;
+    size_t padding = (gw - 1) / 2;
+    vkn::ImageF32L kernel(gw, gw);
+    image::Gauss(kernel, 1.0, 10.0f);
 
     if (options.bottom) {
         coff = stacked.height;
@@ -109,9 +82,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         for (uint32_t y = 0; y < stacked.height; y++) {
             // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
-                uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
+                uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
                 // val = std::max(val - options.cutoff, 0);
-                stacked.image_data[d][stacked.height - y - 1][x] = val;
+                stacked.data[d][stacked.height - y - 1][x] = val;
             }
         }
     }
@@ -147,15 +120,10 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     prefinal = image::Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
-    vkn::ImageF32L3D converted;
-    image::Convert(prefinal, converted);
+    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(prefinal);
 
     // Deconvolve 
-    vkn::ImageF32L3D gauss_stack;
-    gauss_stack.width = converted.width;
-    gauss_stack.height = converted.height;
-    gauss_stack.depth = converted.depth;
-    vkn::Alloc(gauss_stack);
+    vkn::ImageF32L3D gauss_stack(converted.width, converted.height, converted.depth);
 
     /*vkn::ImageF32L first_slice = vkn::Slice(converted, 0);
     vkn::Sandwich(gauss_stack, first_slice, 0);
@@ -221,11 +189,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
-    vkn::ImageU16L image_in;
     vkn::ImageU8L3D prefinal;
-
     std::vector<std::string> lines = util::ReadFileLines(log_path);
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
+    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -244,11 +210,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     // Join all our neurons
-    vkn::ImageU8L3D neuron_mask;
-    neuron_mask.width = image_in.width;
-    neuron_mask.depth = options.stacksize;
-    neuron_mask.height = image_in.height / neuron_mask.depth;
-    vkn::Alloc(neuron_mask);
+    vkn::ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
 
     if (options.threeclass) {
         SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);

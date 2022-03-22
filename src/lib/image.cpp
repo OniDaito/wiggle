@@ -39,7 +39,7 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
             for (uint32_t x = 0; x < image_out.width; x++) {
 
                 size_t channel = d * image_out.height;
-                uint16_t val = image_in.image_data[channel + y][x];
+                uint16_t val = image_in.data[channel + y][x];
                 
                 if (val != 0) {
                     std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
@@ -47,9 +47,9 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
                     if (it != neurons[neuron_id].end()) {
                         uint8_t nval = id_to_write;
                         if (flip_depth) {
-                            image_out.image_data[image_out.depth - d - 1][y][x] = nval;
+                            image_out.data[image_out.depth - d - 1][y][x] = nval;
                         } else {
-                            image_out.image_data[d][y][x] = nval;
+                            image_out.data[d][y][x] = nval;
                         }
                     } 
                 }
@@ -66,18 +66,15 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
  * @return a 2D vkn image
  */
 vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
-    vkn::ImageU8L flat;
-    flat.width = mask.width;
-    flat.height = mask.height;
-    vkn::Alloc(flat);
+    vkn::ImageU8L flat (mask.width, mask.height);
 
     for (uint32_t d = 0; d < mask.depth; d++) {
         for (uint32_t y = 0; y < flat.height; y++) {
             for (uint32_t x = 0; x < flat.width; x++) {
-                uint16_t val = mask.image_data[d][y][x];
-                uint16_t ext = flat.image_data[y][x];
+                uint16_t val = mask.data[d][y][x];
+                uint16_t ext = flat.data[y][x];
                 if (ext == 0) {
-                    flat.image_data[y][x] = val;
+                    flat.data[y][x] = val;
                 }
             }
         }
@@ -94,18 +91,15 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
  * @return a 2D vkn image
  */
 vkn::ImageF32L Flatten(vkn::ImageF32L3D &image) {
-    vkn::ImageF32L flat;
-    flat.width = image.width;
-    flat.height = image.height;
-    vkn::Alloc(flat);
+    vkn::ImageF32L flat(image.width, image.height);
 
     for (uint32_t d = 0; d < image.depth; d++) {
         for (uint32_t y = 0; y < flat.height; y++) {
             for (uint32_t x = 0; x < flat.width; x++) {
-                uint16_t val = image.image_data[d][y][x];
-                uint16_t ext = flat.image_data[y][x];
+                uint16_t val = image.data[d][y][x];
+                uint16_t ext = flat.data[y][x];
                 if (ext == 0) {
-                    flat.image_data[y][x] = val;
+                    flat.data[y][x] = val;
                 }
             }
         }
@@ -331,7 +325,7 @@ bool non_zero(vkn::ImageU8L3D &image) {
     for (uint32_t d = 0; d < image.depth; d++) {
         for (uint32_t y = 0; y < image.height; y++) {
             for (uint32_t x = 0; x < image.width; x++) {
-                uint16_t val = image.image_data[d][y][x];
+                uint16_t val = image.data[d][y][x];
        
                 if (val != 0) {
                     return true;

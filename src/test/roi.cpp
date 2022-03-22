@@ -5,9 +5,8 @@
 using namespace masamune;
 
 TEST_CASE("Testing ROI crop") {
-    vkn::ImageU16L3D test_image0;
     std::string path0("./images/worm3d.tif");
-    image::LoadTiff(path0, test_image0);
+    vkn::ImageU16L3D test_image0 = image::LoadTiff<vkn::ImageU16L3D>(path0);
     CHECK(test_image0.width == 640);
     CHECK(test_image0.height == 300);
 

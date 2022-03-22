@@ -69,13 +69,9 @@ std::vector<ROI> AUGS;
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool flipy) {
-    vkn::ImageU16L image;
-    vkn::ImageU16L3D stacked;
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
-    stacked.width = image.width;
-    stacked.depth = options.stacksize;
-    stacked.height = image.height / (stacked.depth * options.channels); // Two channels
-    vkn::Alloc(stacked);
+    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    vkn::ImageU16L3D stacked(image.width, image.height / (stacked.depth * options.channels), options.stacksize);
+
     uint coff = 0;
     ROI roi;
     ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
@@ -89,12 +85,12 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
         for (uint32_t y = 0; y < stacked.height; y++) {
             // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
-                uint16_t val = image.image_data[(d * stacked.height * options.channels) + coff + y][x];
+                uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
 
                 if (flipy) {
-                    stacked.image_data[d][stacked.height - y - 1][x] = std::max(val - options.cutoff, 0);
+                    stacked.data[d][stacked.height - y - 1][x] = std::max(val - options.cutoff, 0);
                 } else {
-                    stacked.image_data[d][y][x] = std::max(val - options.cutoff, 0);
+                    stacked.data[d][y][x] = std::max(val - options.cutoff, 0);
                 }
             }
         }
@@ -154,14 +150,13 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
                 
                 if (options.flatten){
                     vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::SUM);
-                    vkn::ImageF32L converted;
-                    image::Convert(flattened, converted);
+                    vkn::ImageF32L converted = image::Convert<vkn::ImageF32L>(flattened);
 
                     // Increase the Contrast
                     for (uint32_t h = 0; h < converted.height; h++) {
                         for (uint32_t w = 0; w < converted.width; w++) {
-                            float val = converted.image_data[h][w];
-                            converted.image_data[h][w] = val * 2.0;
+                            float val = converted.data[h][w];
+                            converted.data[h][w] = val * 2.0;
                         }
                     }
 
@@ -199,9 +194,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
-    vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
+    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -220,11 +214,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     // Join all our neurons
-    vkn::ImageU8L3D neuron_mask;
-    neuron_mask.width = image_in.width;
-    neuron_mask.depth = options.stacksize;
-    neuron_mask.height = image_in.height / neuron_mask.depth;
-    vkn::Alloc(neuron_mask);
+    vkn::ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
 
     if (options.threeclass) {
         SetNeuron(image_in, neuron_mask, neurons, 1, !options.flatten, 1);

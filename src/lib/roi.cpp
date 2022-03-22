@@ -72,7 +72,7 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
                             for (int i = 0; i < cropped.depth; i++) {
                                 for (int j = 0; j < cropped.height; j++) {
                                     for (int k = 0; k < cropped.width; k++) {
-                                        sum += static_cast<double>(cropped.image_data[i][j][k]);
+                                        sum += static_cast<double>(cropped.data[i][j][k]);
                                     }
                                 }
                             }
@@ -149,7 +149,7 @@ ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
     for (size_t z = 0; z < input.depth; z += step_depth) {
         for (size_t y = 0; y < input.height; y += step_size) {
             for (size_t x = 0; x < input.width; x += step_size) {
-                uint16_t val = input.image_data[z][y][x];
+                uint16_t val = input.data[z][y][x];
                 
                 if (top_four.size() < 4){
                     FourCoord f = {static_cast<float>(val), x, y, z};

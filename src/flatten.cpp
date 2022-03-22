@@ -49,12 +49,8 @@ typedef struct {
 
 bool MaximumIntensity(Options &options, std::string &tiff_path) {
     static int idx = 0;
-    vkn::ImageU16L image;
-    vkn::ImageU16L flattened;
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
-    flattened.width = image.width;
-    flattened.height = image.height / (options.num_layers * options.channels);
-    vkn::Alloc(flattened);
+    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    vkn::ImageU16L flattened (image.width, image.height / (options.num_layers * options.channels));
     uint coff = 0;
 
     if (options.bottom) {
@@ -66,10 +62,10 @@ bool MaximumIntensity(Options &options, std::string &tiff_path) {
         for (uint32_t y = 0; y < flattened.height; y++) {
 
             for (uint32_t x = 0; x < flattened.width; x++) {
-                uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
-                uint16_t ext = flattened.image_data[y][x];
+                uint16_t val = image.data[(d * flattened.height * options.channels) + coff + y][x];
+                uint16_t ext = flattened.data[y][x];
                 if (val > ext){
-                    flattened.image_data[y][x] = val;
+                    flattened.data[y][x] = val;
                 }
             }
         }
@@ -109,13 +105,8 @@ bool MaximumIntensity(Options &options, std::string &tiff_path) {
  */
 
 bool TiffToLayers(Options &options, std::string &tiff_path) {
-    vkn::ImageU16L image;
-    vkn::ImageU16L3D flattened;
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image);
-    flattened.width = image.width;
-    flattened.depth = options.num_layers;
-    flattened.height = image.height / (flattened.depth * options.channels); // Two channels
-    vkn::Alloc(flattened);
+    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    vkn::ImageU16L3D flattened(image.width, image.height / (flattened.depth * options.channels), options.num_layers);
     uint coff = 0;
 
     if (options.bottom) {
@@ -127,8 +118,8 @@ bool TiffToLayers(Options &options, std::string &tiff_path) {
         for (uint32_t y = 0; y < flattened.height; y++) {
 
             for (uint32_t x = 0; x < flattened.width; x++) {
-                uint16_t val = image.image_data[(d * flattened.height * options.channels) + coff + y][x];
-                flattened.image_data[d][y][x] = val;
+                uint16_t val = image.data[(d * flattened.height * options.channels) + coff + y][x];
+                flattened.data[d][y][x] = val;
             }
         }
     }

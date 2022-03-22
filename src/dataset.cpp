@@ -59,7 +59,7 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
             for (uint32_t x = 0; x < image_out.width; x++) {
 
                 size_t channel = d * image_out.height;
-                uint16_t val = image_in.image_data[channel + y][x];
+                uint16_t val = image_in.data[channel + y][x];
                 
                 if (val != 0) {
                     std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
@@ -67,9 +67,9 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
                     if (it != neurons[neuron_id].end()) {
                         uint8_t nval = neuron_id;
                         if (flip_depth) {
-                            image_out.image_data[image_out.depth - d - 1][y][x] = val;
+                            image_out.data[image_out.depth - d - 1][y][x] = val;
                         } else {
-                            image_out.image_data[d][y][x] = val;
+                            image_out.data[d][y][x] = val;
                         }
                     } 
                 }
@@ -91,9 +91,8 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
-    vkn::ImageU16L image_in;
     std::vector<std::string> lines = util::ReadFileLines(log_path);
-    image::LoadTiff<vkn::ImageU16L>(tiff_path, image_in);
+    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -112,11 +111,7 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     // Export ASI first. We split the tiffs so they have layers
-    vkn::ImageU8L3D asi;
-    asi.width = image_in.width;
-    asi.depth = options.image_slices;
-    asi.height = image_in.height / asi.depth;
-    vkn::Alloc(asi);
+    vkn::ImageU8L3D asi(image_in.width, image_in.height / asi.depth, options.image_slices);
 
     SetNeuron(image_in, asi, neurons, 1, !options.flatten);
     SetNeuron(image_in, asi, neurons, 2, !options.flatten);
@@ -150,16 +145,8 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         } 
     }
 
-    
-
-    // Now look at ASJ
-    
-    vkn::ImageU8L3D asj;
-    asj.width = image_in.width;
-    asj.depth = options.image_slices;
-    asj.height = asj.height = image_in.height / asj.depth;
-    vkn::Alloc(asj);
-
+    // Now look at ASJ    
+    vkn::ImageU8L3D asj(image_in.width, image_in.height / asj.depth, options.image_slices);
     SetNeuron(image_in, asj, neurons, 3, !options.flatten);
     SetNeuron(image_in, asj, neurons, 4, !options.flatten);
 

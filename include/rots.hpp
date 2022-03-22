@@ -49,22 +49,15 @@
 
 template<typename T>
 T Augment(T &image, glm::quat rot, size_t cube_dim, float zscale) {
-    T augmented;
     assert(image.width == image.height);
     assert(cube_dim < image.width);
     assert(cube_dim / zscale < image.depth);
 
-    T resampled;
-    resampled.width = image.width;
-    resampled.height = image.height;
-    resampled.depth = image.width;
-    masamune::vkn::Alloc(resampled);
+    T resampled(image.width, image.height, image.width);
 
     // Essentially, we want a cube, smaller than the input image.
     // Z is a special case and requires scaling.
-    augmented.width = cube_dim;
-    augmented.height = cube_dim;
-    augmented.depth = cube_dim;
+    T augmented(cube_dim, cube_dim, cube_dim);
 
     float aug_ratio = static_cast<float>(cube_dim) / static_cast<float>(image.width);
 
@@ -73,12 +66,11 @@ T Augment(T &image, glm::quat rot, size_t cube_dim, float zscale) {
         for (size_t y = 0; y < resampled.height; y++) {
             for (size_t x = 0; x < resampled.width; x++) {
                 size_t sample_z = static_cast<size_t>(floor(static_cast<float>(z) / zscale));
-                resampled.image_data[z][y][x] = image.image_data[sample_z][y][x];
+                resampled.data[z][y][x] = image.data[sample_z][y][x];
             }
         }
     }
 
-    masamune::vkn::Alloc(augmented);
     glm::mat4 rotmat = glm::toMat4(rot);
     
     // now do the sampling
@@ -130,14 +122,14 @@ T Augment(T &image, glm::quat rot, size_t cube_dim, float zscale) {
                                 if (rx >= 0 && rx < resampled.width &&
                                 ry >= 0 && ry < resampled.height &&
                                 rz >= 0 && rz < resampled.depth) {
-                                    val += static_cast<float>(resampled.image_data[rz][ry][rx]) * (1.0 - dist);
+                                    val += static_cast<float>(resampled.data[rz][ry][rx]) * (1.0 - dist);
                                 }
                             }
                         }
                     }
                 }
 
-                augmented.image_data[z][y][x] = val;
+                augmented.data[z][y][x] = val;
             }
         }
     }

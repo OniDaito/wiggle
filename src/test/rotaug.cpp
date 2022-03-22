@@ -7,9 +7,8 @@
 using namespace masamune;
 
 TEST_CASE("Testing ROI crop") {
-    vkn::ImageU16L3D test_image0;
     std::string path0("./images/worm3d.tif");
-    image::LoadTiff(path0, test_image0);
+    vkn::ImageU16L3D test_image0 = image::LoadTiff<vkn::ImageU16L3D>(path0);
     CHECK(test_image0.width == 640);
     CHECK(test_image0.height == 300);
 
@@ -47,8 +46,7 @@ TEST_CASE("Testing ROI crop") {
     std::string path_crop("./images/worm3d_cropped.tif");
     image::SaveTiff(path_crop, cropped);
 
-    vkn::ImageF32L3D converted;
-    image::Convert(cropped, converted);
+    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(cropped);
     std::string path_converted("./images/worm3d_converted.fits");
     WriteFITS(path_converted, converted);
 
@@ -99,8 +97,7 @@ TEST_CASE("Testing ROI crop") {
         vkn::ImageF32L3D augmented = Augment(contrasted, qrot, roi_size, zratio);
         vkn::ImageF32L3D normalised = image::Normalise(augmented);
         vkn::ImageF32L summed = vkn::Project(normalised, vkn::ProjectionType::SUM);
-        vkn::ImageU8L converted;
-        image::Convert(summed, converted);
+        vkn::ImageU8L converted = image::Convert<vkn::ImageU8L>(summed);
         
         std::cout << "Writing frame " << aug << std::endl;
 

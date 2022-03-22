@@ -17,6 +17,7 @@
 #include <masamune/image/tiff.hpp>
 #include <masamune/image/basic.hpp>
 #include <masamune/image/convert.hpp>
+#include <masamune/image/lucy.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>
