@@ -61,7 +61,7 @@ TEST_CASE("Testing Deconvolution 3D") {
     vkn::ImageF32L3D kernel = image::LoadTiff<vkn::ImageF32L3D>(path_kernel);
     vkn::ImageF32L3D kernel_resized = image::Resize(kernel, 33, 33, 13);
 
-    vkn::ImageF32L3D deconved = image::Deconvolve(converted, kernel_resized, 5);
+    vkn::ImageF32L3D deconved = image::Deconvolve(converted, kernel_resized, 30);
 
     std::string path_cont("./images/test/worm_deconved_3d.fits");
     WriteFITS(path_cont, deconved);
