@@ -52,19 +52,31 @@ TEST_CASE("Testing Deconvolution 3D") {
     CHECK(worm_raw.width == 640);
     CHECK(worm_raw.height == 300);
     CHECK(worm_raw.depth == 51);
-    
-    vkn::ImageU16L3D worm_resized = image::Resize(worm_raw, 320, 150, 25);
-    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(worm_resized);
+    worm_raw.depth -= 1;
+    worm_raw.data.pop_back();
+    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(worm_raw);
 
     // Convolve with a known PSF
-    std::string path_kernel("./images/PSF.tif");
+    std::string path_kernel("./images/PSF3.tif");
     vkn::ImageF32L3D kernel = image::LoadTiff<vkn::ImageF32L3D>(path_kernel);
-    vkn::ImageF32L3D kernel_resized = image::Resize(kernel, 33, 33, 13);
+    vkn::ImageF32L3D deconved = image::DeconvolveFFT(converted, kernel, 10);
 
-    vkn::ImageF32L3D deconved = image::Deconvolve(converted, kernel_resized, 10);
+    // Now perform a low pass filter - convert to an FFT and multiply by gaussian
+    vkn::ImageF32C3D fft_deconved = image::FFT3D(deconved);
+    vkn::ImageF32L3D gauss(12,12,12);
+    image::Gauss(gauss, 1.0, 2.0f);
+
+    int pw = (fft_deconved.width - gauss.width) / 2;
+    int ph = (fft_deconved.height - gauss.height) / 2;
+    int pd = (fft_deconved.depth - gauss.depth) / 2;
+    vkn::ImageF32L3D kernel_padded = image::Pad(gauss, pw, pw, ph, ph, pd, pd, static_cast<decltype(gauss[0])>(0));
+
+    vkn::ImageF32C3D fft_gauss = image::FFT3D(kernel_padded);
+    vkn::ImageF32C3D filtered = image::Mul(fft_deconved, fft_gauss);
+    vkn::ImageF32L3D final = image::IFFT3D(filtered);
 
     std::string path_cont("./images/test/worm_deconved_3d.fits");
-    WriteFITS(path_cont, deconved);
+    WriteFITS(path_cont, final);
 
     // Normalise, constrast then sum
     /*std::function<float(float)> contrast = [](float x) { return x * x; };

@@ -65,14 +65,11 @@ std::vector<glm::quat> ROTS;
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
-    vkn::ImageU16L3D prefinal;
     vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
-    vkn::ImageU16L3D stacked(image.width, image.height / (stacked.depth * options.channels), options.stacksize);
+    vkn::ImageU16L3D stacked(image.width, image.height / (options.stacksize * options.channels), options.stacksize);
     uint coff = 0;
-    size_t gw = 9;
-    size_t padding = (gw - 1) / 2;
-    vkn::ImageF32L kernel(gw, gw);
-    image::Gauss(kernel, 1.0, 10.0f);
+    stacked.depth -= 1;
+    stacked.data.pop_back();
 
     if (options.bottom) {
         coff = stacked.height;
@@ -101,7 +98,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     }
 
     // Find ROI on a half-sized image as it's much faster.
-    prefinal = stacked;
+    vkn::ImageU16L3D prefinal = vkn::Clone(stacked);
     prefinal = image::Resize(stacked, stacked.width / 2, stacked.height/ 2, stacked.depth/ 2);
 
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
@@ -122,30 +119,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     // Convert to float as we need to do some operations
     vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(prefinal);
 
-    // Deconvolve 
-    vkn::ImageF32L3D gauss_stack(converted.width, converted.height, converted.depth);
+    // Deconvolve with a known PSF
+    std::string path_kernel("./images/PSF3.tif");
+    vkn::ImageF32L3D kernel = image::LoadTiff<vkn::ImageF32L3D>(path_kernel);
+    vkn::ImageF32L3D deconved = image::DeconvolveFFT(converted, kernel, 10);   
 
-    /*vkn::ImageF32L first_slice = vkn::Slice(converted, 0);
-    vkn::Sandwich(gauss_stack, first_slice, 0);
-    vkn::ImageF32L last_slice = vkn::Slice(converted, converted.depth - 1);
-    vkn::Sandwich(gauss_stack, last_slice, converted.depth - 1);*/
-
-    std::function<float(float)> bythree = [](float x) { return x * 3; };
-    std::function<float(float)> remove_noise = [](float x) { return std::max(x - 270.0f, 0.0f); };
-
-
-    for (size_t d = 1; d < converted.depth - 1; d++) {
-        vkn::ImageF32L top_slice = vkn::ApplyFunc(vkn::Slice(converted, d - 1 ), remove_noise);
-        vkn::ImageF32L bottom_slice = vkn::ApplyFunc(vkn::Slice(converted, d + 1 ), remove_noise);
-        vkn::ImageF32L current_slice = vkn::ApplyFunc(vkn::ApplyFunc(vkn::Slice(converted, d), remove_noise), bythree);
-        vkn::ImageF32L top_gauss = image::Convolve(top_slice, kernel, 1, padding, image::PaddingType::ZEROS);
-        vkn::ImageF32L bottom_gauss = image::Convolve(bottom_slice, kernel, 1, padding, image::PaddingType::ZEROS);
-        current_slice = image::Sub(current_slice, top_gauss);
-        current_slice = image::Sub(current_slice, bottom_gauss);
-        vkn::Sandwich(gauss_stack, current_slice, d);
-    }
-
-  
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     ROTS.clear();
     glm::quat q(1.0,0,0,0);
@@ -156,7 +134,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         // Rotate, normalise then sum projection
         std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        vkn::ImageF32L3D rotated = Augment(gauss_stack, q, options.roi_xy, options.depth_scale);
+        vkn::ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
         vkn::ImageF32L summed = vkn::Project(rotated, vkn::ProjectionType::SUM);
         vkn::ImageF32L normalised = image::Normalise(summed);
         vkn::ImageF32L contrasted = vkn::ApplyFunc(normalised, contrast);

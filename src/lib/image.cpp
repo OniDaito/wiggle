@@ -142,7 +142,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -187,7 +187,7 @@ void WriteFITS( std::string filename, vkn::ImageF32L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -225,7 +225,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L flattened) {
     nelements = naxes[0] * naxes[1];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -254,7 +254,6 @@ void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
          printerror( status );
     } 
 
-
     if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
         printerror( status ); 
     }
@@ -263,7 +262,7 @@ void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
     nelements = naxes[0] * naxes[1];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -300,7 +299,7 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(vkn::Flatten(flattened)[0]), &status)) {
+    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
