@@ -22,6 +22,9 @@
  *
  */
 
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -49,7 +52,7 @@ typedef struct {
     int num_augs = 1;
 } Options;
 
-using namespace masamune;
+using namespace imagine;
 
 // A fixed set of augmentation directions
 std::vector<glm::quat> ROTS;
@@ -65,8 +68,8 @@ std::vector<glm::quat> ROTS;
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
-    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
-    vkn::ImageU16L3D stacked(image.width, image.height / (options.stacksize * options.channels), options.stacksize);
+    ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
+    ImageU16L3D stacked(image.width, image.height / (options.stacksize * options.channels), options.stacksize);
     uint coff = 0;
     stacked.depth -= 1;
     stacked.data.pop_back();
@@ -86,20 +89,20 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         }
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
-    image_id = util::StringRemove(image_id, "0xAutoStack");
+    image_id = libsee::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
 
     if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(image_idx, 5);
+        image_id  = libsee::IntToStringLeadingZeroes(image_idx, 5);
         output_path = options.output_path + "/" + image_id + "_layered.fits";
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
     // Find ROI on a half-sized image as it's much faster.
-    vkn::ImageU16L3D prefinal = vkn::Clone(stacked);
-    prefinal = image::Resize(stacked, stacked.width / 2, stacked.height/ 2, stacked.depth/ 2);
+    ImageU16L3D prefinal = Clone(stacked);
+    prefinal = Resize(stacked, stacked.width / 2, stacked.height/ 2, stacked.depth/ 2);
 
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
     // that comes later as the mask must match
@@ -114,15 +117,21 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     roi.z = roi_found.z * 2; 
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
-    prefinal = image::Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
-    vkn::ImageF32L3D converted = image::Convert<vkn::ImageF32L3D>(prefinal);
+    ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
+
+    // Perform a subtraction on the images, removing background
+    converted = Sub(converted, 280.0f, true);
+
+    //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
+    //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
 
     // Deconvolve with a known PSF
     std::string path_kernel("./images/PSF3.tif");
-    vkn::ImageF32L3D kernel = image::LoadTiff<vkn::ImageF32L3D>(path_kernel);
-    vkn::ImageF32L3D deconved = image::DeconvolveFFT(converted, kernel, 10);   
+    ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
+    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 30);
 
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     ROTS.clear();
@@ -132,22 +141,22 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     for (int i = 0; i < options.num_augs; i++){
         // Rotate, normalise then sum projection
-        std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
+        std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        vkn::ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
-        vkn::ImageF32L summed = vkn::Project(rotated, vkn::ProjectionType::SUM);
-        vkn::ImageF32L normalised = image::Normalise(summed);
-        vkn::ImageF32L contrasted = vkn::ApplyFunc(normalised, contrast);
-        vkn::ImageF32L renormalised = image::Normalise(contrasted);
+        ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
+        ImageF32L summed = Project(rotated, ProjectionType::SUM);
+        ImageF32L normalised = Normalise(summed);
+        //ImageF32L contrasted = ApplyFunc(normalised, contrast);
+        //ImageF32L renormalised = Normalise(contrasted);
 
         // TODO - there is a bug in float resize. Not sure why!
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         //if (options.width != summed.width || options.height != summed.height) {
-        //    summed = image::Resize(summed, options.width, options.height);
+        //    summed = Resize(summed, options.width, options.height);
         //} 
 
         //WriteFITS(output_path, flattened);
-        WriteFITS(output_path, renormalised);
+        WriteFITS(output_path, normalised);
         q = RandRot();
         ROTS.push_back(q);
     }
@@ -167,9 +176,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
-    vkn::ImageU8L3D prefinal;
-    std::vector<std::string> lines = util::ReadFileLines(log_path);
-    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    ImageU8L3D prefinal;
+    std::vector<std::string> lines = libsee::ReadFileLines(log_path);
+    ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -179,16 +188,16 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     for (std::string line : lines) {
-        std::vector<std::string> tokens = util::SplitStringWhitespace(line);
-        if (util::ToLower(tokens[0]) == "associate") {
+        std::vector<std::string> tokens = libsee::SplitStringWhitespace(line);
+        if (libsee::ToLower(tokens[0]) == "associate") {
             idx += 1;
         } else {
-            neurons[idx].push_back(util::FromString<size_t>(tokens[0]));
+            neurons[idx].push_back(libsee::FromString<size_t>(tokens[0]));
         }
     }
 
     // Join all our neurons
-    vkn::ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
+    ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
 
     if (options.threeclass) {
         SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
@@ -202,30 +211,30 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         SetNeuron(image_in, neuron_mask, neurons, 4, false, 4);
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
-    std::string image_id = util::StringRemove(tokens_log[0], "ID");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log_path), "_.");
+    std::string image_id = libsee::StringRemove(tokens_log[0], "ID");
 
     if (options.rename == true) {
-        image_id = util::IntToStringLeadingZeroes(image_idx, 5);
+        image_id = libsee::IntToStringLeadingZeroes(image_idx, 5);
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
     prefinal = neuron_mask;
-    prefinal = image::Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
+    prefinal = Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
         
 
     // Now generate the masks
     for (int i = 0; i < options.num_augs; i++){
         glm::quat q = ROTS[i];
-        std::string aug_id  = util::IntToStringLeadingZeroes(i, 2);
+        std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
         prefinal = Augment(prefinal, q, options.roi_xy, options.depth_scale);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
         if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
-            prefinal = image::Resize(prefinal, options.width, options.height, options.depth);
+            prefinal = Resize(prefinal, options.width, options.height, options.depth);
         } 
         WriteFITS(output_path, prefinal);
     }
@@ -275,26 +284,26 @@ int main (int argc, char ** argv) {
                 options.threeclass = true;
                 break;
             case 'n':
-                options.offset_number = util::FromString<int>(optarg);
+                options.offset_number = libsee::FromString<int>(optarg);
                 image_idx = options.offset_number;
                 break;
             case 'z':
-                options.depth = util::FromString<int>(optarg);
+                options.depth = libsee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = util::FromString<int>(optarg);
+                options.width = libsee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = util::FromString<int>(optarg);
+                options.height = libsee::FromString<int>(optarg);
                 break;
             case 's':
-                options.stacksize = util::FromString<int>(optarg);
+                options.stacksize = libsee::FromString<int>(optarg);
                 break;
             case 'j':
-                options.roi_xy = util::FromString<int>(optarg);
+                options.roi_xy = libsee::FromString<int>(optarg);
                 break;
             case 'q':
-                options.num_augs = util::FromString<int>(optarg);
+                options.num_augs = libsee::FromString<int>(optarg);
                 break;
         }
     }
@@ -319,27 +328,27 @@ int main (int argc, char ** argv) {
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
         bool paired = false;
-        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff_anno), "_.-");
+        std::vector<std::string> tokens = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
-            std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.-");
+            std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
                 
                 for (std::string tiff_input : tiff_input_files) {
                     // Find the matching input stack
-                    std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(tiff_input), "_.-");
+                    std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_input), "_.-");
                     int tidx = 0;
 
                     for (std::string t : tokens1) {
-                        if (util::StringContains(t, "AutoStack")) {
+                        if (libsee::StringContains(t, "AutoStack")) {
                             break;
                         }
                         tidx += 1;
                     }
                     
-                    int ida = util::FromString<int>(util::StringRemove(tokens1[tidx], "0xAutoStack"));
-                    int idb = util::FromString<int>(util::StringRemove(id, "ID"));
+                    int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[tidx], "0xAutoStack"));
+                    int idb = libsee::FromString<int>(libsee::StringRemove(id, "ID"));
 
                     if (ida == idb) {
                         try {

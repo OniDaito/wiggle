@@ -1,5 +1,4 @@
 #include "roi.hpp"
-#include "threadpool.hpp"
 
 /**
  * 
@@ -13,12 +12,14 @@
  * @return an ROI struct
  */
 
-ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
+using namespace imagine;
+
+ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
     size_t step_size = 5; // For speed we don't go with 1
     size_t step_depth = 1; // 1 for depth as it's shorter
     size_t num_threads = 4; // One for each quadrant
 
-    ThreadPool pool{ static_cast<size_t>(num_threads) }; // 1 thread per ROI
+    libsee::ThreadPool pool{ static_cast<size_t>(num_threads) }; // 1 thread per ROI
     std::vector<std::future<int>> futures;
 
     // Lambda function that we will eventually thread
@@ -66,7 +67,7 @@ ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
                 for (size_t zi = zs; zi + d - 1 < ze; zi += step_depth) {
                     for (size_t yi = ys; yi + h -1 < ye; yi += step_size) {
                         for (size_t xi = xs; xi + w -1 < xe; xi += step_size) {
-                            masamune::vkn::ImageU16L3D cropped = masamune::image::Crop(input, xi, yi, zi, w, h, d);
+                            ImageU16L3D cropped = Crop(input, xi, yi, zi, w, h, d);
                             double sum = 0;
 
                             for (int i = 0; i < cropped.depth; i++) {
@@ -136,7 +137,7 @@ bool CompareFour(FourCoord i1, FourCoord i2) {
     return (i1.val < i2.val);
 }
 
-ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth) {
+ROI FindROICentred(ImageU16L3D &input, size_t xy, size_t depth) {
     size_t step_size = 5; // For speed we don't go with 1
     size_t step_depth = 1; // 1 for depth as it's shorter
 

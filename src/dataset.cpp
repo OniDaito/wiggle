@@ -19,17 +19,11 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.hpp>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
-#include <masamune/image/tiff.hpp>
-#include <masamune/image/basic.hpp>
 #include <vector>
 #include "data.hpp"
 #include "image.hpp"
 
-
-using namespace masamune;
+using namespace imagine;
 
 // Our command line options, held in a struct.
 typedef struct {
@@ -49,7 +43,7 @@ typedef struct {
  * Check the area id against the neuron list, setting it to what it claims to be.
  * Look at one channel only though, top or bottom
  */
-void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
+void SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out,
     std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth) {
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
@@ -91,8 +85,8 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
-    std::vector<std::string> lines = util::ReadFileLines(log_path);
-    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    std::vector<std::string> lines = libsee::ReadFileLines(log_path);
+    ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -102,25 +96,25 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     for (std::string line : lines) {
-        std::vector<std::string> tokens = util::SplitStringWhitespace(line);
-        if (util::ToLower(tokens[0]) == "associate") {
+        std::vector<std::string> tokens = libsee::SplitStringWhitespace(line);
+        if (libsee::ToLower(tokens[0]) == "associate") {
             idx += 1;
         } else {
-            neurons[idx].push_back(util::FromString<size_t>(tokens[0]));
+            neurons[idx].push_back(libsee::FromString<size_t>(tokens[0]));
         }
     }
 
     // Export ASI first. We split the tiffs so they have layers
-    vkn::ImageU8L3D asi(image_in.width, image_in.height / asi.depth, options.image_slices);
+    ImageU8L3D asi(image_in.width, image_in.height / asi.depth, options.image_slices);
 
     SetNeuron(image_in, asi, neurons, 1, !options.flatten);
     SetNeuron(image_in, asi, neurons, 2, !options.flatten);
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
-    std::string image_id = util::StringRemove(tokens_log[0], "ID");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log_path), "_.");
+    std::string image_id = libsee::StringRemove(tokens_log[0], "ID");
 
     if (options.rename == true) {
-        image_id = util::IntToStringLeadingZeroes(image_idx, 5);
+        image_id = libsee::IntToStringLeadingZeroes(image_idx, 5);
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
@@ -129,24 +123,24 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     if (non_zero(asi)) {
 
-        //image::SaveTiff(output_path, asi);
+        //SaveTiff(output_path, asi);
         if (options.flatten){
-            vkn::ImageU8L asi_flat = Flatten(asi);
+            ImageU8L asi_flat = Flatten(asi);
             if (asi_flat.width != options.width || asi_flat.height != options.height) {
-                image::Resize(asi_flat, options.width, options.height);
+                Resize(asi_flat, options.width, options.height);
             }
-            //image::SaveTiff(output_path, asi_flat);
-            vkn::ImageU8L asi_flip = image::MirrorVertical(asi_flat);
-            image::Save(output_path_png, asi_flip);
+            //SaveTiff(output_path, asi_flat);
+            ImageU8L asi_flip = MirrorVertical(asi_flat);
+            Save(output_path_png, asi_flip);
 
         } else {
-            // image::SaveTiff(output_path, asi);
+            // SaveTiff(output_path, asi);
             WriteFITS(output_path, asi);
         } 
     }
 
     // Now look at ASJ    
-    vkn::ImageU8L3D asj(image_in.width, image_in.height / asj.depth, options.image_slices);
+    ImageU8L3D asj(image_in.width, image_in.height / asj.depth, options.image_slices);
     SetNeuron(image_in, asj, neurons, 3, !options.flatten);
     SetNeuron(image_in, asj, neurons, 4, !options.flatten);
 
@@ -156,15 +150,15 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     if (non_zero(asj)) {
 
         if (options.flatten){
-            vkn::ImageU8L asj_flat = Flatten(asj);
+            ImageU8L asj_flat = Flatten(asj);
             if (asj_flat.width != options.width || asj_flat.height != options.height) {
-                image::Resize(asj_flat, options.width, options.height);
+                Resize(asj_flat, options.width, options.height);
             }
-            //image::SaveTiff(output_path, asj_flat);
-            vkn::ImageU8L asj_flip = image::MirrorVertical(asj_flat);
-            image::Save(output_path_png, asj_flip);
+            //SaveTiff(output_path, asj_flat);
+            ImageU8L asj_flip = MirrorVertical(asj_flat);
+            Save(output_path_png, asj_flip);
         } else {
-            // image::SaveTiff(output_path, asj);
+            // SaveTiff(output_path, asj);
             WriteFITS(output_path, asj);
         }
     }
@@ -206,16 +200,16 @@ int main (int argc, char ** argv) {
                 options.rename = true;
                 break;
             case 'n':
-                options.offset_number = util::FromString<int>(optarg);
+                options.offset_number = libsee::FromString<int>(optarg);
                 break;
             case 'z':
-                options.image_slices = util::FromString<int>(optarg);
+                options.image_slices = libsee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = util::FromString<int>(optarg);
+                options.width = libsee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = util::FromString<int>(optarg);
+                options.height = libsee::FromString<int>(optarg);
                 break;
         }
     }
@@ -227,20 +221,20 @@ int main (int argc, char ** argv) {
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << ", flatten: " << options.flatten << std::endl;
 
     // Browse the directory looking for files
-    std::vector<std::string> files = util::ListFiles(options.image_path);
+    std::vector<std::string> files = libsee::ListFiles(options.image_path);
     std::vector<std::string> tiff_files;
     std::vector<std::string> log_files;
     std::vector<std::string> dat_files;
 
     for (std::string filename : files) {
         std::cout << filename << std::endl;
-        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
+        if (libsee::StringContains(filename, ".tif") && libsee::StringContains(filename, "ID")  && libsee::StringContains(filename, "WS")) {
             tiff_files.push_back(filename);
         }
-        else if (util::StringContains(filename, ".dat")) {
+        else if (libsee::StringContains(filename, ".dat")) {
             dat_files.push_back(filename);
         }
-        else if (util::StringContains(filename, ".log")) {
+        else if (libsee::StringContains(filename, ".log")) {
             log_files.push_back(filename);
         }
     }
@@ -251,17 +245,17 @@ int main (int argc, char ** argv) {
     // We use a sort based on the last ID number - keeps it inline with the flatten program
     struct {
         bool operator()(std::string a, std::string b) const {
-            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
+            std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(a), "_.-");
             int idx = 0;
             for (std::string t : tokens1) {
-                if (util::StringContains(t, "ID")){
+                if (libsee::StringContains(t, "ID")){
                     break;
                 }
                 idx += 1;
             }
-            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "ID"));
-            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
-            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "ID"));
+            int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[idx], "ID"));
+            std::vector<std::string> tokens2 = libsee::SplitStringChars(libsee::FilenameFromPath(b), "_.-");
+            int idb = libsee::FromString<int>(libsee::StringRemove(tokens2[idx], "ID"));
             return ida < idb;
         }
     } SortOrder;
@@ -271,11 +265,11 @@ int main (int argc, char ** argv) {
     // Pair up the tiffs with their log file and process them.
     for (std::string tiff : tiff_files) {
         bool paired = false;
-        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff), "_.-");
+        std::vector<std::string> tokens = libsee::SplitStringChars(libsee::FilenameFromPath(tiff), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
-            std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.-");
+            std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
                 std::cout << "Pairing " << tiff << " with " << log << std::endl;
                 paired = true;

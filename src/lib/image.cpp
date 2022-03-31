@@ -14,7 +14,7 @@
 
 #include "image.hpp"
 
-using namespace masamune;
+using namespace imagine;
 
 
 void printerror( int status) {
@@ -29,7 +29,7 @@ void printerror( int status) {
  * Check the area id against the neuron list, setting it to what it claims to be.
  * Look at one channel only though, top or bottom
  */
-void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
+void SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out,
     std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write) {
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
@@ -65,8 +65,8 @@ void SetNeuron(vkn::ImageU16L &image_in, vkn::ImageU8L3D &image_out,
  * 
  * @return a 2D vkn image
  */
-vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
-    vkn::ImageU8L flat (mask.width, mask.height);
+ImageU8L Flatten(ImageU8L3D &mask) {
+    ImageU8L flat (mask.width, mask.height);
 
     for (uint32_t d = 0; d < mask.depth; d++) {
         for (uint32_t y = 0; y < flat.height; y++) {
@@ -90,8 +90,8 @@ vkn::ImageU8L Flatten(vkn::ImageU8L3D &mask) {
  * 
  * @return a 2D vkn image
  */
-vkn::ImageF32L Flatten(vkn::ImageF32L3D &image) {
-    vkn::ImageF32L flat(image.width, image.height);
+ImageF32L Flatten(ImageF32L3D &image) {
+    ImageF32L flat(image.width, image.height);
 
     for (uint32_t d = 0; d < image.depth; d++) {
         for (uint32_t y = 0; y < flat.height; y++) {
@@ -109,7 +109,7 @@ vkn::ImageF32L Flatten(vkn::ImageF32L3D &image) {
 
 // TODO - writeFITS should probably go into masamune eventually
 
-void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
+void WriteFITS( std::string filename, ImageU16L3D flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
     long  fpixel, nelements, exposure;
@@ -142,7 +142,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -161,7 +161,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L3D flattened) {
 }
 
 
-void WriteFITS( std::string filename, vkn::ImageF32L3D flattened) {
+void WriteFITS( std::string filename, ImageF32L3D flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
     long  fpixel, nelements, exposure;
@@ -187,7 +187,7 @@ void WriteFITS( std::string filename, vkn::ImageF32L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
+    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -199,7 +199,7 @@ void WriteFITS( std::string filename, vkn::ImageF32L3D flattened) {
 }
 
 
-void WriteFITS( std::string filename, vkn::ImageU16L flattened) {
+void WriteFITS( std::string filename, ImageU16L flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
     long  fpixel, nelements, exposure;
@@ -225,7 +225,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L flattened) {
     nelements = naxes[0] * naxes[1];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
+    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -237,7 +237,7 @@ void WriteFITS( std::string filename, vkn::ImageU16L flattened) {
 }
 
 
-void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
+void WriteFITS(std::string filename, ImageF32L flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
     long  fpixel, nelements, exposure;
@@ -262,7 +262,7 @@ void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
     nelements = naxes[0] * naxes[1];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
+    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -274,7 +274,7 @@ void WriteFITS(std::string filename, vkn::ImageF32L flattened) {
 }
 
 
-void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
+void WriteFITS( std::string filename, ImageU8L3D flattened) {
     fitsfile *fptr; 
     int status, ii, jj;
     long  fpixel, nelements, exposure;
@@ -299,7 +299,7 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
     nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
 
     // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(vkn::Flatten(flattened, false)[0]), &status)) {
+    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
         printerror( status );
     }
 
@@ -314,12 +314,12 @@ void WriteFITS( std::string filename, vkn::ImageU8L3D flattened) {
 /**
  * Return false if all elements are zero
  *
- * @param image - vkn::ImageU8L3D
+ * @param image - ImageU8L3D
  *
  * @return bool
  */
 
-bool non_zero(vkn::ImageU8L3D &image) {
+bool non_zero(ImageU8L3D &image) {
 
     for (uint32_t d = 0; d < image.depth; d++) {
         for (uint32_t y = 0; y < image.height; y++) {

@@ -11,12 +11,9 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.hpp>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
-#include <masamune/image/tiff.hpp>
-#include <masamune/image/basic.hpp>
-#include <masamune/image/convert.hpp>
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>

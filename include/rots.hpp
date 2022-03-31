@@ -12,11 +12,9 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.hpp>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
-#include <masamune/image/tiff.hpp>
-#include <masamune/image/basic.hpp>
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -25,7 +23,18 @@
 #include <thread>
 #include <math.h>
 #include <cmath>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/matrix.hpp>
+#include <glm/common.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/vec4.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
 #include "roi.hpp"
 
 /**

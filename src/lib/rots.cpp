@@ -14,7 +14,7 @@
 
 #include "rots.hpp"
 
-using namespace masamune;
+using namespace imagine;
 
 glm::quat RandRot() {
     // Multiply by 0.25 to keep the rotations small

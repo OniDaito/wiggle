@@ -14,7 +14,7 @@
 
 #include "data.hpp"
 
-using namespace masamune;
+using namespace imagine;
 
 /**
  * Given a path to the output, return the index for the next
@@ -26,11 +26,11 @@ using namespace masamune;
  */
 
 int GetOffetNumber(std::string output_path) {
-    std::vector<std::string> files = util::ListFiles(output_path);
+    std::vector<std::string> files = libsee::ListFiles(output_path);
     int count  = 0;
 
     for (std::string filename : files) {
-        if (util::StringContains(filename, "layered")) {
+        if (libsee::StringContains(filename, "layered")) {
             count += 1;
         }
     }
@@ -50,10 +50,10 @@ int GetOffetNumber(std::string output_path) {
 
 std::vector<std::string> FindLogFiles(std::string annotation_path) {
     std::vector<std::string> log_files;
-    std::vector<std::string> files_anno = util::ListFiles(annotation_path);
+    std::vector<std::string> files_anno = libsee::ListFiles(annotation_path);
 
     for (std::string filename : files_anno) {
-        if (util::StringContains(filename, ".log")) {
+        if (libsee::StringContains(filename, ".log")) {
             log_files.push_back(filename);
         }
     }
@@ -72,11 +72,11 @@ std::vector<std::string> FindLogFiles(std::string annotation_path) {
  */
 
 std::vector<std::string> FindAnnotations(std::string annotation_path) {
-    std::vector<std::string> files_anno = util::ListFiles(annotation_path);
+    std::vector<std::string> files_anno = libsee::ListFiles(annotation_path);
     std::vector<std::string> tiff_anno_files;
 
     for (std::string filename : files_anno) {
-        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "ID")  && util::StringContains(filename, "WS")) {
+        if (libsee::StringContains(filename, ".tif") && libsee::StringContains(filename, "ID")  && libsee::StringContains(filename, "WS")) {
             tiff_anno_files.push_back(filename);
         }
     }
@@ -87,17 +87,17 @@ std::vector<std::string> FindAnnotations(std::string annotation_path) {
     // We use a sort based on the last ID number - keeps it inline with the flatten program
     struct {
         bool operator()(std::string a, std::string b) const {
-            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
+            std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(a), "_.-");
             int idx = 0;
             for (std::string t : tokens1) {
-                if (util::StringContains(t, "ID")){
+                if (libsee::StringContains(t, "ID")){
                     break;
                 }
                 idx += 1;
             }
-            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "ID"));
-            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
-            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "ID"));
+            int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[idx], "ID"));
+            std::vector<std::string> tokens2 = libsee::SplitStringChars(libsee::FilenameFromPath(b), "_.-");
+            int idb = libsee::FromString<int>(libsee::StringRemove(tokens2[idx], "ID"));
             return ida < idb;
         }
     } SortOrderAnno;
@@ -117,11 +117,11 @@ std::vector<std::string> FindAnnotations(std::string annotation_path) {
 
 std::vector<std::string> FindInputFiles(std::string image_path) {
     // Browse the directory looking for files
-    std::vector<std::string> files_input = util::ListFiles(image_path);
+    std::vector<std::string> files_input = libsee::ListFiles(image_path);
     std::vector<std::string> tiff_input_files;
 
     for (std::string filename : files_input) {
-        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "AutoStack")) {
+        if (libsee::StringContains(filename, ".tif") && libsee::StringContains(filename, "AutoStack")) {
             tiff_input_files.push_back(filename);
         }
     }
@@ -129,18 +129,18 @@ std::vector<std::string> FindInputFiles(std::string image_path) {
     // We use a sort based on the last ID number - keeps it inline with the sort above
     struct {
         bool operator()(std::string a, std::string b) const {
-            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
+            std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(a), "_.-");
             int idx = 0;
             for (std::string t : tokens1) {
-                if (util::StringContains(t, "AutoStack")) {
+                if (libsee::StringContains(t, "AutoStack")) {
                     break;
                 }
                 idx += 1;
             }
 
-            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "0xAutoStack"));
-            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
-            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "0xAutoStack"));
+            int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[idx], "0xAutoStack"));
+            std::vector<std::string> tokens2 = libsee::SplitStringChars(libsee::FilenameFromPath(b), "_.-");
+            int idb = libsee::FromString<int>(libsee::StringRemove(tokens2[idx], "0xAutoStack"));
             return ida < idb;
         }
     } SortOrderInput;

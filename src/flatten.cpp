@@ -12,15 +12,12 @@
  */
 
 #include <getopt.h>
-#include <masamune/masamune_prog.hpp>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
-#include <masamune/image/tiff.hpp>
-#include <masamune/image/basic.hpp>
-
 #include <algorithm>
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 
-using namespace masamune;
+using namespace imagine;
 
 // Our command line options, held in a struct.
 typedef struct {
@@ -49,8 +46,8 @@ typedef struct {
 
 bool MaximumIntensity(Options &options, std::string &tiff_path) {
     static int idx = 0;
-    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
-    vkn::ImageU16L flattened (image.width, image.height / (options.num_layers * options.channels));
+    ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
+    ImageU16L flattened (image.width, image.height / (options.num_layers * options.channels));
     uint coff = 0;
 
     if (options.bottom) {
@@ -71,25 +68,25 @@ bool MaximumIntensity(Options &options, std::string &tiff_path) {
         }
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
-    image_id = util::StringRemove(image_id, "0xAutoStack");
+    image_id = libsee::StringRemove(image_id, "0xAutoStack");
     std::string output_path_png = options.output_path + "/" + image_id + "_mip.png";
 
     if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(options.offset_number + idx, 5);
+        image_id  = libsee::IntToStringLeadingZeroes(options.offset_number + idx, 5);
         output_path_png = options.output_path + "/" + image_id + "_mip.png";
         std::cout << "Renaming " << tiff_path << " to " << output_path_png << std::endl;
     }
 
     // std::string output_path = options.output_path + "/" + image_id + "_mip.tiff";
-    // image::SaveTiff(output_path, flattened);
+    // SaveTiff(output_path, flattened);
     if (flattened.width != options.width || flattened.height != options.height) {
         std::cout << "Resizing " << output_path_png << std::endl;
-        image::Resize(flattened, options.width, options.height);
+        Resize(flattened, options.width, options.height);
     }
 
-    image::Save(output_path_png, flattened);
+    Save(output_path_png, flattened);
     idx += 1;
     return true;
 }
@@ -105,8 +102,8 @@ bool MaximumIntensity(Options &options, std::string &tiff_path) {
  */
 
 bool TiffToLayers(Options &options, std::string &tiff_path) {
-    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
-    vkn::ImageU16L3D flattened(image.width, image.height / (flattened.depth * options.channels), options.num_layers);
+    ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
+    ImageU16L3D flattened(image.width, image.height / (flattened.depth * options.channels), options.num_layers);
     uint coff = 0;
 
     if (options.bottom) {
@@ -124,11 +121,11 @@ bool TiffToLayers(Options &options, std::string &tiff_path) {
         }
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
-    image_id = util::StringRemove(image_id, "0xAutoStack");
+    image_id = libsee::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_layered.tiff";
-    image::SaveTiff(output_path, flattened);
+    SaveTiff(output_path, flattened);
 
     return true;
 }
@@ -156,7 +153,7 @@ int main (int argc, char ** argv) {
                 options.output_path = std::string(optarg);
                 break;
             case 'l' :
-                options.num_layers = util::FromString<uint32_t>(std::string(optarg));
+                options.num_layers = libsee::FromString<uint32_t>(std::string(optarg));
                 break;
             case 'm' :
                 options.max_intensity = true;
@@ -165,16 +162,16 @@ int main (int argc, char ** argv) {
                 options.rename = true;
                 break;
             case 'n':
-                options.offset_number = util::FromString<int>(optarg);
+                options.offset_number = libsee::FromString<int>(optarg);
                 break;
             case 'b':
                 options.bottom = true;
                 break;
             case 'w':
-                options.width = util::FromString<int>(optarg);
+                options.width = libsee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = util::FromString<int>(optarg);
+                options.height = libsee::FromString<int>(optarg);
                 break;
         }
     }
@@ -185,11 +182,11 @@ int main (int argc, char ** argv) {
     std::cout << "Options: max intensity " << options.max_intensity << ", bottom: " << options.bottom << " width: " << options.width
         << " height: " << options.height << " Z layers: " << options.num_layers << std::endl;
     // Browse the directory looking for files
-    std::vector<std::string> files = util::ListFiles(options.image_path);
+    std::vector<std::string> files = libsee::ListFiles(options.image_path);
     std::vector<std::string> tiff_files;
 
     for (std::string filename : files) {
-        if (util::StringContains(filename, ".tif") && util::StringContains(filename, "AutoStack")) {
+        if (libsee::StringContains(filename, ".tif") && libsee::StringContains(filename, "AutoStack")) {
             tiff_files.push_back(filename);
         }
     }
@@ -197,17 +194,17 @@ int main (int argc, char ** argv) {
       // We use a sort based on the last ID number - keeps it inline with the flatten program
     struct {
         bool operator()(std::string a, std::string b) const {
-            std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(a), "_.-");
+            std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(a), "_.-");
             int idx = 0;
             for (std::string t : tokens1) {
-                if (util::StringContains(t, "AutoStack")){
+                if (libsee::StringContains(t, "AutoStack")){
                     break;
                 }
                 idx += 1;
             }
-            int ida = util::FromString<int>(util::StringRemove(tokens1[idx], "0xAutoStack"));
-            std::vector<std::string> tokens2 = util::SplitStringChars(util::FilenameFromPath(b), "_.-");
-            int idb = util::FromString<int>(util::StringRemove(tokens2[idx], "0xAutoStack"));
+            int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[idx], "0xAutoStack"));
+            std::vector<std::string> tokens2 = libsee::SplitStringChars(libsee::FilenameFromPath(b), "_.-");
+            int idb = libsee::FromString<int>(libsee::StringRemove(tokens2[idx], "0xAutoStack"));
             return ida < idb;
         }
     } SortOrder;

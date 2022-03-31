@@ -11,11 +11,9 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/masamune_prog.hpp>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
-#include <masamune/image/tiff.hpp>
-#include <masamune/image/basic.hpp>
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -31,7 +29,7 @@ typedef struct {
     double sum;
 } ROI;
 
-ROI FindROI(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth);
-ROI FindROICentred(masamune::vkn::ImageU16L3D &input, size_t xy, size_t depth);
+ROI FindROI(imagine::ImageU16L3D &input, size_t xy, size_t depth);
+ROI FindROICentred(imagine::ImageU16L3D &input, size_t xy, size_t depth);
 
 #endif

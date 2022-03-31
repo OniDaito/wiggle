@@ -16,11 +16,12 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <masamune/util/string.hpp>
-#include <masamune/util/file.hpp>
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <imagine/imagine.hpp>
 #include <vector>
 
-using namespace masamune;
+using namespace imagine;
 
 // Our command line options, held in a struct.
 typedef struct {
@@ -43,19 +44,19 @@ typedef struct {
  */
 
 void ProcessLog(std::string &log_path, std::string &replace, std::string &prefix) {
-    std::vector<std::string> lines = util::ReadFileLines(log_path);
+    std::vector<std::string> lines = libsee::ReadFileLines(log_path);
 
     for (std::string line : lines) {
-        if (util::StringBeginsWith(line, "Renaming") && !util::StringContains(line, "AutoStack")) {
+        if (libsee::StringBeginsWith(line, "Renaming") && !libsee::StringContains(line, "AutoStack")) {
 
             //Renaming /phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL285-d1.0/ID42_WS2.tiff to 01794
-            std::string tpath = util::StringRemove(line, "Renaming ");
-            std::vector<std::string> tokens = util::SplitStringString(tpath, " to ");
+            std::string tpath = libsee::StringRemove(line, "Renaming ");
+            std::vector<std::string> tokens = libsee::SplitStringString(tpath, " to ");
 
-            size_t idx = util::FromString<size_t>(tokens[1]);
-            std::string dat_path = util::StringRemove(tokens[0], "_WS2.tiff") + "_2.dat";
-            std::string final_path = util::StringReplace(dat_path, replace, prefix); 
-            std::vector<std::string> dat_lines = util::ReadFileLines(final_path);
+            size_t idx = libsee::FromString<size_t>(tokens[1]);
+            std::string dat_path = libsee::StringRemove(tokens[0], "_WS2.tiff") + "_2.dat";
+            std::string final_path = libsee::StringReplace(dat_path, replace, prefix); 
+            std::vector<std::string> dat_lines = libsee::ReadFileLines(final_path);
             size_t asi_1 = 0;
             size_t asi_2 = 0;
             size_t asj_1 = 0;
@@ -63,14 +64,14 @@ void ProcessLog(std::string &log_path, std::string &replace, std::string &prefix
 
             // Now process the lines in the dat files to grab the fluorescence
             for (std::string dat_line : dat_lines) {
-                std::vector<std::string> dats = util::SplitStringWhitespace(dat_line);
-                if (util::StringContains(dat_line, "ASI-1")) { asi_1 = util::FromString<size_t>(dats[1]); }
-                if (util::StringContains(dat_line, "ASI-2")) { asi_2 = util::FromString<size_t>(dats[1]); }
-                if (util::StringContains(dat_line, "ASJ-1")) { asj_1 = util::FromString<size_t>(dats[1]); }
-                if (util::StringContains(dat_line, "ASJ-2")) { asj_2 = util::FromString<size_t>(dats[1]); }
+                std::vector<std::string> dats = libsee::SplitStringWhitespace(dat_line);
+                if (libsee::StringContains(dat_line, "ASI-1")) { asi_1 = libsee::FromString<size_t>(dats[1]); }
+                if (libsee::StringContains(dat_line, "ASI-2")) { asi_2 = libsee::FromString<size_t>(dats[1]); }
+                if (libsee::StringContains(dat_line, "ASJ-1")) { asj_1 = libsee::FromString<size_t>(dats[1]); }
+                if (libsee::StringContains(dat_line, "ASJ-2")) { asj_2 = libsee::FromString<size_t>(dats[1]); }
             }
 
-            std::cout << util::ToString(idx) << "," << util::ToString(asi_1) <<  "," << util::ToString(asi_2) << "," << util::ToString(asj_1) << "," << util::ToString(asj_2) << "," << final_path << std::endl;
+            std::cout << libsee::ToString(idx) << "," << libsee::ToString(asi_1) <<  "," << libsee::ToString(asi_2) << "," << libsee::ToString(asj_1) << "," << libsee::ToString(asj_2) << "," << final_path << std::endl;
              
         }
     }

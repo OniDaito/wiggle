@@ -23,12 +23,15 @@
  *
  */
 
+#include <libsee/string.hpp>
+#include <libsee/file.hpp>
+#include <libsee/threadpool.hpp>
+#include <imagine/imagine.hpp>
 #include "roi.hpp"
 #include "image.hpp"
 #include "data.hpp"
-#include "threadpool.hpp"
 
-using namespace masamune;
+using namespace imagine;
 
 // Our command line options, held in a struct.
 typedef struct {
@@ -69,12 +72,12 @@ std::vector<ROI> AUGS;
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool flipy) {
-    vkn::ImageU16L image = image::LoadTiff<vkn::ImageU16L>(tiff_path);
-    vkn::ImageU16L3D stacked(image.width, image.height / (stacked.depth * options.channels), options.stacksize);
+    ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
+    ImageU16L3D stacked(image.width, image.height / (stacked.depth * options.channels), options.stacksize);
 
     uint coff = 0;
     ROI roi;
-    ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
+    libsee::ThreadPool pool{ static_cast<size_t>(options.num_rois) }; // 1 thread per ROI
     std::vector<std::future<int>> futures;
 
     if (options.bottom) {
@@ -96,22 +99,22 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
         }
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(tiff_path), "_.-");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
-    image_id = util::StringRemove(image_id, "0xAutoStack");
+    image_id = libsee::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
 
     if (options.rename == true) {
-        image_id  = util::IntToStringLeadingZeroes(image_idx, 5);
+        image_id  = libsee::IntToStringLeadingZeroes(image_idx, 5);
         output_path = options.output_path + "/" + image_id + "_layered.fits";
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    vkn::ImageU16L3D final_image = stacked;
+    ImageU16L3D final_image = stacked;
 
     // Perform a resize with nearest neighbour sampling if we have different sizes.
     if (options.width != stacked.width || options.height != stacked.height || options.depth != stacked.depth) {
-        final_image = image::Resize(stacked, options.width, options.height, options.depth);
+        final_image = Resize(stacked, options.width, options.height, options.depth);
     }
 
     if (options.crop) {
@@ -143,14 +146,14 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
 
         for (int i = 0; i < options.num_rois; i++){
             futures.push_back(pool.execute( [i, options, image_id, final_image] {
-                std::string augnum = util::IntToStringLeadingZeroes(i, 2);
+                std::string augnum = libsee::IntToStringLeadingZeroes(i, 2);
                 std::string output_path = options.output_path + "/" + image_id + "_" + augnum + "_layered.fits";
                 ROI roi = AUGS[i];
-                vkn::ImageU16L3D cropped_image = image::Crop(final_image, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
+                ImageU16L3D cropped_image = Crop(final_image, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
                 
                 if (options.flatten){
-                    vkn::ImageU16L flattened = vkn::Project(cropped_image, vkn::ProjectionType::SUM);
-                    vkn::ImageF32L converted = image::Convert<vkn::ImageF32L>(flattened);
+                    ImageU16L flattened = Project(cropped_image, ProjectionType::SUM);
+                    ImageF32L converted = Convert<ImageF32L>(flattened);
 
                     // Increase the Contrast
                     for (uint32_t h = 0; h < converted.height; h++) {
@@ -173,7 +176,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
     } else { 
 
       if (options.flatten){
-          vkn::ImageU16L flattened = vkn::Project(final_image, vkn::ProjectionType::SUM);
+          ImageU16L flattened = Project(final_image, ProjectionType::SUM);
           WriteFITS(output_path, flattened);
       } else {
           WriteFITS(output_path, final_image);
@@ -194,8 +197,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, bool fl
  */
 
 bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx) {
-    std::vector<std::string> lines = util::ReadFileLines(log_path);
-    vkn::ImageU16L image_in = image::LoadTiff<vkn::ImageU16L>(tiff_path);
+    std::vector<std::string> lines = libsee::ReadFileLines(log_path);
+    ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
@@ -205,16 +208,16 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     for (std::string line : lines) {
-        std::vector<std::string> tokens = util::SplitStringWhitespace(line);
-        if (util::ToLower(tokens[0]) == "associate") {
+        std::vector<std::string> tokens = libsee::SplitStringWhitespace(line);
+        if (libsee::ToLower(tokens[0]) == "associate") {
             idx += 1;
         } else {
-            neurons[idx].push_back(util::FromString<size_t>(tokens[0]));
+            neurons[idx].push_back(libsee::FromString<size_t>(tokens[0]));
         }
     }
 
     // Join all our neurons
-    vkn::ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
+    ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
 
     if (options.threeclass) {
         SetNeuron(image_in, neuron_mask, neurons, 1, !options.flatten, 1);
@@ -228,28 +231,28 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
         SetNeuron(image_in, neuron_mask, neurons, 4, !options.flatten, 4);
     }
 
-    std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log_path), "_.");
-    std::string image_id = util::StringRemove(tokens_log[0], "ID");
+    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log_path), "_.");
+    std::string image_id = libsee::StringRemove(tokens_log[0], "ID");
 
     if (options.rename == true) {
-        image_id = util::IntToStringLeadingZeroes(image_idx, 5);
+        image_id = libsee::IntToStringLeadingZeroes(image_idx, 5);
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
-    vkn::ImageU8L3D final_image = neuron_mask; 
+    ImageU8L3D final_image = neuron_mask; 
 
     if (non_zero(neuron_mask)) {
 
         if (neuron_mask.width != options.width || neuron_mask.height != options.height || neuron_mask.depth != options.depth) {
-            final_image = image::Resize(neuron_mask, options.width, options.height, options.depth);
+            final_image = Resize(neuron_mask, options.width, options.height, options.depth);
 
             if (options.crop) {
                 for (int i = 0; i < options.num_rois; i++) {
-                    std::string aug = util::IntToStringLeadingZeroes(i, 2);
+                    std::string aug = libsee::IntToStringLeadingZeroes(i, 2);
                     output_path = options.output_path + "/" + image_id + "_" + aug + "_mask.fits";
-                    final_image = image::Crop(final_image, AUGS[i].x, AUGS[i].y, AUGS[i].z, options.roi_xy, options.roi_xy, options.roi_depth);        
+                    final_image = Crop(final_image, AUGS[i].x, AUGS[i].y, AUGS[i].z, options.roi_xy, options.roi_xy, options.roi_depth);        
                     WriteFITS(output_path, final_image);
                 }
             }
@@ -312,32 +315,32 @@ int main (int argc, char ** argv) {
                 options.crop = true;
                 break;
             case 'n':
-                options.offset_number = util::FromString<int>(optarg);
+                options.offset_number = libsee::FromString<int>(optarg);
                 image_idx = options.offset_number;
                 break;
             case 'd':
-                options.cutoff = util::FromString<uint16_t>(optarg);
+                options.cutoff = libsee::FromString<uint16_t>(optarg);
                 break;
             case 'z':
-                options.depth = util::FromString<int>(optarg);
+                options.depth = libsee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = util::FromString<int>(optarg);
+                options.width = libsee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = util::FromString<int>(optarg);
+                options.height = libsee::FromString<int>(optarg);
                 break;
             case 's':
-                options.stacksize = util::FromString<int>(optarg);
+                options.stacksize = libsee::FromString<int>(optarg);
                 break;
             case 'j':
-                options.roi_xy = util::FromString<int>(optarg);
+                options.roi_xy = libsee::FromString<int>(optarg);
                 break;
             case 'l':
-                options.roi_depth = util::FromString<int>(optarg);
+                options.roi_depth = libsee::FromString<int>(optarg);
                 break;
             case 'q':
-                options.num_rois = util::FromString<int>(optarg);
+                options.num_rois = libsee::FromString<int>(optarg);
                 break;
         }
     }
@@ -362,27 +365,27 @@ int main (int argc, char ** argv) {
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
         bool paired = false;
-        std::vector<std::string> tokens = util::SplitStringChars(util::FilenameFromPath(tiff_anno), "_.-");
+        std::vector<std::string> tokens = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
-            std::vector<std::string> tokens_log = util::SplitStringChars(util::FilenameFromPath(log), "_.-");
+            std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
                 
                 for (std::string tiff_input : tiff_input_files) {
                     // Find the matching input stack
-                    std::vector<std::string> tokens1 = util::SplitStringChars(util::FilenameFromPath(tiff_input), "_.-");
+                    std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_input), "_.-");
                     int tidx = 0;
 
                     for (std::string t : tokens1) {
-                        if (util::StringContains(t, "AutoStack")) {
+                        if (libsee::StringContains(t, "AutoStack")) {
                             break;
                         }
                         tidx += 1;
                     }
                     
-                    int ida = util::FromString<int>(util::StringRemove(tokens1[tidx], "0xAutoStack"));
-                    int idb = util::FromString<int>(util::StringRemove(id, "ID"));
+                    int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[tidx], "0xAutoStack"));
+                    int idb = libsee::FromString<int>(libsee::StringRemove(id, "ID"));
 
                     if (ida == idb) {
                         try {
