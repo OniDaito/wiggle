@@ -102,21 +102,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     // Find ROI on a half-sized image as it's much faster.
     ImageU16L3D prefinal = Clone(stacked);
-    prefinal = Resize(stacked, stacked.width / 2, stacked.height/ 2, stacked.depth/ 2);
-
-    // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
-    // that comes later as the mask must match
-    float half_roi = static_cast<float>(options.roi_xy ) / 2.0;
-    int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
-    int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
-
-    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ROI roi_found = FindROICentred(prefinal, d / 2, depth / 2);
-    roi.x = roi_found.x * 2;
-    roi.y = roi_found.y * 2;
-    roi.z = roi_found.z * 2; 
-    roi.xy_dim = roi_found.xy_dim * 2;
-    roi.depth = roi_found.depth * 2;
     prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
@@ -131,16 +116,14 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     // Deconvolve with a known PSF
     std::string path_kernel("./images/PSF3.tif");
     ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 30);
+    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 10);
 
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
-    ROTS.clear();
-    glm::quat q(1.0,0,0,0);
-    ROTS.push_back(q);
-    std::function<float(float)> contrast = [](float x) { return x * x; };
+   
 
     for (int i = 0; i < options.num_augs; i++){
         // Rotate, normalise then sum projection
+        glm::quat q = ROTS[i];
         std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
         ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
@@ -157,8 +140,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
         //WriteFITS(output_path, flattened);
         WriteFITS(output_path, normalised);
-        q = RandRot();
-        ROTS.push_back(q);
+      
     }
 
     return true;
@@ -175,7 +157,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  * @return bool if success or not
  */
 
-bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
+bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
     ImageU8L3D prefinal;
     std::vector<std::string> lines = libsee::ReadFileLines(log_path);
     ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
@@ -197,20 +179,44 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     // Join all our neurons
-    ImageU8L3D neuron_mask(image_in.width, image_in.height / neuron_mask.depth, options.stacksize);
+    ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
+    bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     if (options.threeclass) {
-        SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
-        SetNeuron(image_in, neuron_mask, neurons, 2, false, 1);
-        SetNeuron(image_in, neuron_mask, neurons, 3, false, 2);
-        SetNeuron(image_in, neuron_mask, neurons, 4, false, 2);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, false, 1);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, false, 2);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, false, 2);
     } else {
-        SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
-        SetNeuron(image_in, neuron_mask, neurons, 2, false, 2);
-        SetNeuron(image_in, neuron_mask, neurons, 3, false, 3);
-        SetNeuron(image_in, neuron_mask, neurons, 4, false, 4);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, false, 2);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, false, 3);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, false, 4);
     }
 
+    if (!n1 || !n2 || !n3 || !n4) {
+        return false;
+    }
+
+    // Find the ROI using the mask
+    ImageU8L3D smaller = Clone(neuron_mask);
+    smaller = Resize(neuron_mask, neuron_mask.width / 2, neuron_mask.height/ 2, neuron_mask.depth/ 2);
+
+    // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
+    // that comes later as the mask must match
+    float half_roi = static_cast<float>(options.roi_xy ) / 2.0;
+    int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
+    int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
+
+    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+    ROI roi_found = FindROICentred(smaller, d / 2, depth / 2);
+    roi.x = roi_found.x * 2;
+    roi.y = roi_found.y * 2;
+    roi.z = roi_found.z * 2; 
+    roi.xy_dim = roi_found.xy_dim * 2;
+    roi.depth = roi_found.depth * 2;
+    ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    
     std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log_path), "_.");
     std::string image_id = libsee::StringRemove(tokens_log[0], "ID");
 
@@ -221,22 +227,25 @@ bool ProcessTiff(Options &options, std::string &tiff_path, std::string &log_path
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
-    prefinal = neuron_mask;
-    prefinal = Crop(prefinal, roi.x, roi.y, roi.z, options.roi_xy, options.roi_xy, options.roi_depth);
         
+    ROTS.clear();
+    glm::quat q(1.0,0,0,0);
+    ROTS.push_back(q);
 
     // Now generate the masks
     for (int i = 0; i < options.num_augs; i++){
-        glm::quat q = ROTS[i];
         std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
         output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
-        prefinal = Augment(prefinal, q, options.roi_xy, options.depth_scale);
+        prefinal = Augment(cropped, q, options.roi_xy, options.depth_scale);
 
         // Perform a resize with nearest neighbour sampling if we have different sizes.
-        if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
-            prefinal = Resize(prefinal, options.width, options.height, options.depth);
-        } 
-        WriteFITS(output_path, prefinal);
+        //if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
+        //    prefinal = Resize(prefinal, options.width, options.height, options.depth);
+        //}
+        ImageF32L mipped = Project(cropped, ProjectionType::MAX_INTENSITY);
+        WriteFITS(output_path, mipped);
+        q = RandRot();
+        ROTS.push_back(q);
     }
 
     return true;
@@ -354,10 +363,12 @@ int main (int argc, char ** argv) {
                         try {
                             ROI roi;
                             std::cout << "Stacking: " << tiff_input << std::endl;
-                            TiffToFits(options, tiff_input, image_idx, roi);
-                            std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
-                            paired = true;
-                            // ProcessTiff(options, tiff_anno, log, image_idx, roi);
+                            if (ProcessMask(options, tiff_anno, log, image_idx, roi)) {
+                                TiffToFits(options, tiff_input, image_idx, roi);
+                                std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
+                                paired = true;
+                            }
+                          
                             image_idx += 1;
                             break;
                         } catch (const std::exception &e) {

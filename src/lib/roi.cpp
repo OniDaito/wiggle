@@ -193,3 +193,60 @@ ROI FindROICentred(ImageU16L3D &input, size_t xy, size_t depth) {
 
     return roi;
 }
+
+ROI FindROICentred(ImageU8L3D &input, size_t xy, size_t depth) {
+    size_t step_size = 5; // For speed we don't go with 1
+    size_t step_depth = 1; // 1 for depth as it's shorter
+
+    // Lambda function that we will eventually thread
+    ROI roi;
+    roi.xy_dim = xy;
+    roi.depth = depth;
+    std::deque<FourCoord> top_four;
+
+    for (size_t z = 0; z < input.depth; z += step_depth) {
+        for (size_t y = 0; y < input.height; y += step_size) {
+            for (size_t x = 0; x < input.width; x += step_size) {
+                uint8_t val = std::max(input.data[z][y][x], static_cast<uint8_t>(1)); // Using neurons, we squash everything to 1
+                
+                if (top_four.size() < 4){
+                    FourCoord f = {static_cast<float>(val), x, y, z};
+                    top_four.push_back(f);
+                    std::sort(top_four.begin(), top_four.end(), CompareFour);
+                } else {
+                    if (val > top_four[0].val) {
+                        FourCoord f = {val, x, y, z};
+                        top_four.pop_front();
+                        top_four.push_back(f);
+                        std::sort(top_four.begin(), top_four.end(), CompareFour);
+                    }  
+                }
+            }
+        }
+    }
+
+    roi.x = static_cast<size_t>(std::max( ((top_four[0].x + top_four[1].x + top_four[2].x + top_four[3].x) / 4.0f - static_cast<float>(xy) / 2.0f), 0.0f));
+    roi.y = static_cast<size_t>(std::max( ((top_four[0].y + top_four[1].y + top_four[2].y + top_four[3].y) / 4.0f - static_cast<float>(xy) / 2.0f), 0.0f));
+    roi.z = 0;
+    
+    if (depth < input.depth) {
+        roi.z = static_cast<size_t>(std::max( ((top_four[0].z + top_four[1].z + top_four[2].z + top_four[3].z) / 4.0f - static_cast<float>(depth) / 2.0f), 0.0f));
+    }
+    
+    //std::cout << "Input " << input.width << ", " << input.height << ", " << input.depth << std::endl;
+    //std::cout << "ROI " << roi.x << ", " << roi.y << ", " << roi.z << ", " << xy << ", " << depth << std::endl;
+
+    if (roi.x + xy >= input.width) {
+        roi.x = roi.x - (roi.x + xy - input.width + 1);
+    }
+    if (roi.y + xy >= input.height) {
+        roi.y = roi.y - (roi.y + xy - input.height + 1);
+    }
+    if (roi.z + depth >= input.depth) {
+        roi.z = roi.z - (roi.z + depth - input.depth + 1);
+    }
+
+    //std::cout << "ROI adjusted " << roi.x << ", " << roi.y << ", " << roi.z << ", " << xy << ", " << depth << std::endl;
+
+    return roi;
+}

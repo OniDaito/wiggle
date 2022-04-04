@@ -31,5 +31,6 @@ typedef struct {
 
 ROI FindROI(imagine::ImageU16L3D &input, size_t xy, size_t depth);
 ROI FindROICentred(imagine::ImageU16L3D &input, size_t xy, size_t depth);
+ROI FindROICentred(imagine::ImageU8L3D &input, size_t xy, size_t depth);
 
 #endif

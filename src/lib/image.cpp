@@ -29,8 +29,8 @@ void printerror( int status) {
  * Check the area id against the neuron list, setting it to what it claims to be.
  * Look at one channel only though, top or bottom
  */
-void SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out,
-    std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write) {
+bool SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out, std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write) {
+    bool neuron_set = false;
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
 
@@ -45,6 +45,7 @@ void SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out,
                     std::vector<size_t>::iterator it = std::find(neurons[neuron_id].begin(),
                         neurons[neuron_id].end(), static_cast<size_t>(val));
                     if (it != neurons[neuron_id].end()) {
+                        neuron_set = true;
                         uint8_t nval = id_to_write;
                         if (flip_depth) {
                             image_out.data[image_out.depth - d - 1][y][x] = nval;
@@ -56,6 +57,7 @@ void SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out,
             }
         }
     }
+    return neuron_set;
 }
 
 /**
