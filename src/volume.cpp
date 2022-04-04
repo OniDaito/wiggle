@@ -242,7 +242,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         //if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
         //    prefinal = Resize(prefinal, options.width, options.height, options.depth);
         //}
-        ImageU8L mipped = Project(cropped, ProjectionType::MAX_INTENSITY);
+        ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
         WriteFITS(output_path, mipped);
         q = RandRot();
         ROTS.push_back(q);
