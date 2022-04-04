@@ -35,6 +35,7 @@ void WriteFITS(std::string filename, imagine::ImageF32L3D flattened);
 void WriteFITS(std::string filename, imagine::ImageU8L3D flattened);
 void WriteFITS(std::string filename, imagine::ImageU16L flattened);
 void WriteFITS(std::string filename, imagine::ImageF32L flattened);
+void WriteFITS(std::string filename, imagine::ImageU8L flattened);
 bool non_zero(imagine::ImageU8L3D &image);
 void printerror( int status);
 
