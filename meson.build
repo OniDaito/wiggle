@@ -63,7 +63,8 @@ executable('volume',
           install : false,
           include_directories : include_dirs,
           dependencies : [libsee, imagine, cfits, glfw],
-          link_with : wiggle)
+          link_with : wiggle,
+          link_args : '-Wl,-lstdc++fs,-lpthread')
 
 # flatten
 executable('flatten',
