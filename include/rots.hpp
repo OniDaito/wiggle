@@ -20,6 +20,7 @@
 #include <numeric>
 #include <time.h>
 #include <cstdlib>
+#include <random>
 #include <thread>
 #include <math.h>
 #include <cmath>
@@ -57,7 +58,7 @@
  */
 
 template<typename T>
-T Augment(T &image, glm::quat rot, size_t cube_dim, float zscale) {
+T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
     assert(image.width == image.height);
     assert(cube_dim < image.width);
     assert(cube_dim / zscale < image.depth);

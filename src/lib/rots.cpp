@@ -16,12 +16,13 @@
 
 using namespace imagine;
 
+std::default_random_engine RANDROT_GENERATOR;
+std::uniform_real_distribution<float> RANDROT_DISTRIB(0.0f,1.0f);
+
 glm::quat RandRot() {
-    // Multiply by 0.25 to keep the rotations small
-    srand(time(NULL));
-    float u1 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    float u2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    float u3 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    float u1 = RANDROT_DISTRIB(RANDROT_GENERATOR);
+    float u2 = RANDROT_DISTRIB(RANDROT_GENERATOR);
+    float u3 = RANDROT_DISTRIB(RANDROT_GENERATOR);
 
     glm::quat q = glm::quat(
             static_cast <float>(sqrt(1.0 - u1) * sin(2.0 * M_PI * u2)),

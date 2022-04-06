@@ -24,6 +24,7 @@
 
 #include <libsee/string.hpp>
 #include <libsee/file.hpp>
+#include <libsee/threadpool.hpp>
 #include <imagine/imagine.hpp>
 #include "volume.hpp"
 #include "image.hpp"
@@ -85,6 +86,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
                 // val = std::max(val - options.cutoff, 0);
                 stacked.data[d][stacked.height - y - 1][x] = val;
+                //stacked.data[d][y][x] = val;
             }
         }
     }
@@ -119,29 +121,25 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 10);
 
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
-   
+    // Thread this bit for a bit more speed
+    libsee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
+    std::vector<std::future<int>> futures;
 
     for (int i = 0; i < options.num_augs; i++){
-        // Rotate, normalise then sum projection
-        glm::quat q = ROTS[i];
-        std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
-        output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-        ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
-        ImageF32L summed = Project(rotated, ProjectionType::SUM);
-        ImageF32L normalised = Normalise(summed);
-        //ImageF32L contrasted = ApplyFunc(normalised, contrast);
-        //ImageF32L renormalised = Normalise(contrasted);
-
-        // TODO - there is a bug in float resize. Not sure why!
-        // Perform a resize with nearest neighbour sampling if we have different sizes.
-        //if (options.width != summed.width || options.height != summed.height) {
-        //    summed = Resize(summed, options.width, options.height);
-        //} 
-
-        //WriteFITS(output_path, flattened);
-        WriteFITS(output_path, normalised);
-      
+        futures.push_back(pool.execute( [i, output_path, options, image_id, deconved] () {  
+            // Rotate, normalise then sum projection
+            glm::quat q = ROTS[i];
+            std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
+            std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
+            ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
+            ImageF32L summed = Project(rotated, ProjectionType::SUM);
+            ImageF32L normalised = Normalise(summed);
+            WriteFITS(output_path, normalised);
+            return i;
+        }));
     }
+
+    for (auto &fut : futures) { fut.get(); }
 
     return true;
 }
@@ -158,7 +156,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  */
 
 bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
-    ImageU8L3D prefinal;
     std::vector<std::string> lines = libsee::ReadFileLines(log_path);
     ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
@@ -183,15 +180,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     if (options.threeclass) {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, false, 1);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, false, 2);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, false, 2);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
     } else {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, false, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, false, 2);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, false, 3);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, false, 4);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
     }
 
     if (!n1 || !n2 || !n3 || !n4) {
@@ -231,23 +228,27 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     ROTS.clear();
     glm::quat q(1.0,0,0,0);
     ROTS.push_back(q);
-
-    // Now generate the masks
-    for (int i = 0; i < options.num_augs; i++){
-        std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
-        output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
-        prefinal = Augment(cropped, q, options.roi_xy, options.depth_scale);
-
-        // Perform a resize with nearest neighbour sampling if we have different sizes.
-        //if (options.width != prefinal.width || options.height != prefinal.height || options.depth != prefinal.depth) {
-        //    prefinal = Resize(prefinal, options.width, options.height, options.depth);
-        //}
-        ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
-        WriteFITS(output_path, mipped);
-        q = RandRot();
-        ROTS.push_back(q);
+    
+    for (int i = 1; i < options.num_augs; i++) {
+        ROTS.push_back(RandRot());
     }
 
+    // Now generate the masks - run in parallel
+    libsee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
+    std::vector<std::future<int>> futures;
+
+    for (int i = 0; i < options.num_augs; i++){
+        futures.push_back(pool.execute( [i, output_path, options, image_id, cropped] () {  
+            std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
+            std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
+            ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
+            ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
+            WriteFITS(output_path, mipped);
+            return i;
+        }));
+    }
+
+    for (auto &fut : futures) { fut.get(); }
     return true;
 }
 
