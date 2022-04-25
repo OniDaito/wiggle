@@ -17,13 +17,30 @@
 using namespace imagine;
 
 
-void printerror( int status) {
-    if (status) {
-       fits_report_error(stderr, status);   // print error report
-       exit( status );                      // terminate the program, returning error status
+/**
+ * Create a mask stack
+ */
+ImageU8L3D StackMask(ImageU16L &image_in, size_t width, size_t height, size_t stacksize) {
+    ImageU8L3D image_out(width, height, stacksize);
+    bool neuron_set = false;
+
+    for (uint32_t d = 0; d < image_out.depth; d++) {
+        
+        for (uint32_t y = 0; y < image_out.height; y++) {
+
+            for (uint32_t x = 0; x < image_out.width; x++) {
+                size_t channel = d * image_out.height;
+                uint16_t val = image_in.data[channel + y][x];
+                
+                if (val != 0) {
+                    image_out.data[d][y][x] = val;
+                }
+            }
+        }
     }
-    return;
+    return image_out;
 }
+
 
 /**
  * Check the area id against the neuron list, setting it to what it claims to be.
@@ -107,247 +124,6 @@ ImageF32L Flatten(ImageF32L3D &image) {
         }
     }
     return flat;
-}
-
-// TODO - writeFITS should probably go into masamune eventually
-
-void WriteFITS( std::string filename, ImageU16L3D flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  USHORT_IMG; // 16-bit unsigned short pixel values
-    long naxis    =   3;        // 3D
-    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    /* write the required keywords for the primary array image.     */
-    /* Since bitpix = USHORT_IMG, this will cause cfitsio to create */
-    /* a FITS image with BITPIX = 16 (signed short integers) with   */
-    /* BSCALE = 1.0 and BZERO = 32768.  This is the convention that */
-    /* FITS uses to store unsigned integers.  Note that the BSCALE  */
-    /* and BZERO keywords will be automatically written by cfitsio  */
-    /* in this case.                                                */
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    /* write another optional keyword to the header */
-    /* Note that the ADDRESS of the value is passed in the routine */
-    /* exposure = 1500;
-    if ( fits_update_key(fptr, TLONG, "EXPOSURE", &exposure,
-         "Total Exposure Time", &status) )
-         printerror( status );           */
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-
-void WriteFITS( std::string filename, ImageF32L3D flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  FLOAT_IMG; // 16-bit unsigned short pixel values
-    long naxis    =   3;        // 3D
-    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-
-void WriteFITS( std::string filename, ImageU16L flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  USHORT_IMG; // 16-bit unsigned short pixel values
-    long naxis    =   2;        // 2D
-    long naxes[2] = { flattened.width, flattened.height }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TUSHORT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-
-void WriteFITS(std::string filename, ImageF32L flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  FLOAT_IMG; // 32 bit Float values
-    long naxis    =   2;        // 2D
-    long naxes[2] = { flattened.width, flattened.height }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TFLOAT, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-
-void WriteFITS(std::string filename, ImageU8L flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  BYTE_IMG; // 32 bit Float values
-    long naxis    =   2;        // 2D
-    long naxes[2] = { flattened.width, flattened.height }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
-}
-
-
-
-void WriteFITS( std::string filename, ImageU8L3D flattened) {
-    fitsfile *fptr; 
-    int status, ii, jj;
-    long  fpixel, nelements, exposure;
-
-    // initialize FITS image parameters
-    int bitpix   =  BYTE_IMG; // 8-bit unsigned short pixel values
-    long naxis    =   3;        // 3D
-    long naxes[3] = { flattened.width, flattened.height, flattened.depth }; 
-
-    remove(filename.c_str());   // Delete old file if it already exists
-    status = 0;                 // initialize status before calling fitsio routines
-
-    if (fits_create_file(&fptr, filename.c_str(), &status)) {
-         printerror( status );
-    } 
-
-    if (fits_create_img(fptr,  bitpix, naxis, naxes, &status)) {
-        printerror( status ); 
-    }
-                  
-    fpixel = 1;                                  // first pixel to write
-    nelements = naxes[0] * naxes[1] * naxes[2];  // number of pixels to write
-
-    // write the array of unsigned integers to the FITS file
-    if (fits_write_img(fptr, TBYTE, fpixel, nelements, &(Flatten(flattened, false)[0]), &status)) {
-        printerror( status );
-    }
-
-    if (fits_close_file(fptr, &status)) {
-        printerror( status );      
-    }       
-              
-    return;
 }
 
 

@@ -16,8 +16,7 @@ project_dir  = meson.current_source_dir() # MESON_SOURCE_ROOT
 compiler = meson.get_compiler('cpp')
 
 imagine = dependency('imagine')
-libsee = dependency('libsee')
-cfits = dependency('cfitsio')
+libcee = dependency('libcee')
 glfw = dependency('glfw3')
 
 # The include directories for the dependencies inside this project
@@ -34,82 +33,67 @@ wiggle = library('wiggle', sources : [
   'src/lib/roi.cpp',
   'src/lib/rots.cpp',
   ],
-  dependencies : [libsee, imagine, cfits, glfw],
+  dependencies : [libcee, imagine, glfw],
   include_directories : include_dirs,
   link_args : '-lpthread',
 )
-
-
-# dataset
-executable('dataset',
-          'src/dataset.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libsee, imagine, cfits],
-          link_with : wiggle)
-
-# multiset
-executable('multiset',
-          'src/multiset.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libsee, imagine, cfits],
-          link_with : [wiggle],
-          link_args : '-Wl,-lstdc++fs,-lpthread')
 
 # volume
 executable('volume',
           'src/volume.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [libsee, imagine, cfits, glfw],
+          dependencies : [libcee, imagine, glfw],
           link_with : wiggle,
           link_args : '-Wl,-lstdc++fs,-lpthread')
 
-# flatten
-executable('flatten',
-          'src/flatten.cpp',
+# Single pair
+executable('single',
+          'src/single.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [libsee, imagine, cfits],
-          link_with : wiggle)
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lstdc++fs,-lpthread')
 
-executable('fluro',
-          'src/fluro.cpp',
+# Graph
+executable('graph',
+          'src/graph.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [libsee, imagine],
-          link_with : wiggle)
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lstdc++fs,-lpthread')
 
 # Tests
 test_basic = executable('test_basic',
   'src/test/basic.cpp',
   include_directories : include_dirs,
-  dependencies : [libsee, imagine, cfits],
+  dependencies : [libcee, imagine],
   link_with : wiggle)
 
 test_roi = executable('test_roi',
   'src/test/roi.cpp',
   include_directories : include_dirs,
-  dependencies : [libsee, imagine, cfits],
+  dependencies : [libcee, imagine],
   link_with : wiggle)
 
 test_rotaug = executable('test_rotaug',
   'src/test/rotaug.cpp',
   include_directories : include_dirs,
-  dependencies : [libsee, imagine, cfits],
+  dependencies : [libcee, imagine],
   link_with : wiggle)
 
 test_deconv = executable('test_deconv',
   'src/test/deconv.cpp',
   include_directories : include_dirs,
-  dependencies : [libsee, imagine, cfits],
+  dependencies : [libcee, imagine],
   link_with : wiggle)
 
 test_deconv_stack = executable('test_deconv_stack',
   'src/test/deconv_stack.cpp',
   include_directories : include_dirs,
-  dependencies : [libsee, imagine, cfits],
+  dependencies : [libcee, imagine],
   link_with : wiggle)
 
 test('Basic Test', test_basic)

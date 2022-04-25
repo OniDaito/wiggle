@@ -76,7 +76,7 @@ TEST_CASE("Testing Deconvolution 3D") {
     ImageF32L3D final = IFFT3D(filtered);
 
     std::string path_cont("./images/test/worm_deconved_3d.fits");
-    WriteFITS(path_cont, final);
+    SaveFITS(path_cont, final);
 
     // Normalise, constrast then sum
     /*std::function<float(float)> contrast = [](float x) { return x * x; };

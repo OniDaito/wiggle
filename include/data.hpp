@@ -11,8 +11,8 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <libsee/string.hpp>
-#include <libsee/file.hpp>
+#include <libcee/string.hpp>
+#include <libcee/file.hpp>
 #include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
@@ -22,6 +22,7 @@
 
 int GetOffetNumber(std::string output_path);
 std::vector<std::string> FindLogFiles(std::string annotation_path);
+std::vector<std::string> FindDatFiles(std::string annotation_path);
 std::vector<std::string> FindAnnotations(std::string annotation_path);
 std::vector<std::string> FindInputFiles(std::string image_path);
 

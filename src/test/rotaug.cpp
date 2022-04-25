@@ -48,7 +48,7 @@ TEST_CASE("Testing ROI crop") {
 
     ImageF32L3D converted = Convert<ImageF32L3D>(cropped);
     std::string path_converted("./images/worm3d_converted.fits");
-    WriteFITS(path_converted, converted);
+    SaveFITS(path_converted, converted);
 
     std::function<float(float)> contrast = [](float x) { return x * x; };
     ImageF32L3D contrasted = ApplyFunc(converted, contrast);
@@ -68,24 +68,24 @@ TEST_CASE("Testing ROI crop") {
     assert(fmax == 1.0f);
 
     std::string path_aug3d("./images/worm3d_augmented.fits");
-    WriteFITS(path_aug3d, normalised);
+    SaveFITS(path_aug3d, normalised);
 
     ImageF32L summed = Project(normalised, ProjectionType::SUM);
     std::string path_aug("./images/worm_augmented.fits");
-    WriteFITS(path_aug, summed);
+    SaveFITS(path_aug, summed);
 
     std::string path_jpg("./images/worm_augmented.jpg");
-    Save(path_jpg, summed);
+    SaveJPG(path_jpg, summed);
 
     ImageF32L mipped = Project(normalised, ProjectionType::MAX_INTENSITY);
     std::string path_mip("./images/worm_augmented_mip.fits");
-    WriteFITS(path_mip, mipped);
+    SaveFITS(path_mip, mipped);
 
     // Do some rotation animations
     int num_frames = 360;
 
     for (int i = 0; i < num_frames; i++) {
-        std::string aug = libsee::IntToStringLeadingZeroes(i, 5);
+        std::string aug = libcee::IntToStringLeadingZeroes(i, 5);
         std::string path_jpg("./images/anim/worm_" + aug + ".jpg");
 
         glm::quat qrot = glm::quat(1.0,0,0,0);
@@ -101,7 +101,7 @@ TEST_CASE("Testing ROI crop") {
         
         std::cout << "Writing frame " << aug << std::endl;
 
-        Save(path_jpg, converted);
+        SaveJPG(path_jpg, converted);
     }
 
 }

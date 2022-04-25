@@ -22,9 +22,9 @@
  *
  */
 
-#include <libsee/string.hpp>
-#include <libsee/file.hpp>
-#include <libsee/threadpool.hpp>
+#include <libcee/string.hpp>
+#include <libcee/file.hpp>
+#include <libcee/threadpool.hpp>
 #include <imagine/imagine.hpp>
 #include "volume.hpp"
 #include "image.hpp"
@@ -59,6 +59,39 @@ using namespace imagine;
 std::vector<glm::quat> ROTS;
 
 /**
+ * @brief The Image processing pipeline for source images.
+ * Perform a Crop, noise subtraction and deconvolution
+ *
+ * 
+ * @param image_in 
+ * @param roi 
+ * @return ImageF32L3D 
+ */
+
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi) {
+    // Find ROI on a half-sized image as it's much faster.
+    ImageU16L3D prefinal = Clone(image_in);
+    prefinal = Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+
+    // Convert to float as we need to do some operations
+    ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
+
+    // Perform a subtraction on the images, removing background
+    converted = Sub(converted, 280.0f, true);
+
+    //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
+    //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
+
+    // Deconvolve with a known PSF
+    std::string path_kernel("./images/PSF3.tif");
+    ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
+    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 10);
+    
+    return deconved;
+}
+
+
+/**
  * Given a tiff file return the same file but with one channel and 
  * as a series of layers
  * 
@@ -91,50 +124,34 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         }
     }
 
-    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_path), "_.-");
+    std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
-    image_id = libsee::StringRemove(image_id, "0xAutoStack");
+    image_id = libcee::StringRemove(image_id, "0xAutoStack");
     std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
 
     if (options.rename == true) {
-        image_id  = libsee::IntToStringLeadingZeroes(image_idx, 5);
+        image_id  = libcee::IntToStringLeadingZeroes(image_idx, 5);
         output_path = options.output_path + "/" + image_id + "_layered.fits";
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    // Find ROI on a half-sized image as it's much faster.
-    ImageU16L3D prefinal = Clone(stacked);
-    prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
-
-    // Convert to float as we need to do some operations
-    ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
-
-    // Perform a subtraction on the images, removing background
-    converted = Sub(converted, 280.0f, true);
-
-    //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
-    //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
-
-    // Deconvolve with a known PSF
-    std::string path_kernel("./images/PSF3.tif");
-    ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 10);
+    ImageF32L3D processed = ProcessPipe(stacked, roi);
 
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
-    libsee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
+    libcee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
     std::vector<std::future<int>> futures;
 
     for (int i = 0; i < options.num_augs; i++){
-        futures.push_back(pool.execute( [i, output_path, options, image_id, deconved] () {  
+        futures.push_back(pool.execute( [i, output_path, options, image_id, processed] () {  
             // Rotate, normalise then sum projection
             glm::quat q = ROTS[i];
-            std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
+            std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-            ImageF32L3D rotated = Augment(deconved, q, options.roi_xy, options.depth_scale);
+            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale);
             ImageF32L summed = Project(rotated, ProjectionType::SUM);
             ImageF32L normalised = Normalise(summed);
-            WriteFITS(output_path, normalised);
+            SaveFITS(output_path, normalised);
             return i;
         }));
     }
@@ -156,22 +173,23 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  */
 
 bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
-    std::vector<std::string> lines = libsee::ReadFileLines(log_path);
+    std::vector<std::string> lines = libcee::ReadFileLines(log_path);
     ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
     std::vector<std::vector<size_t>> neurons; // 0: None, 1: ASI-1, 2: ASI-2, 3: ASJ-1, 4: ASJ-2
 
     // Read the log file and extract the neuron numbers
+    // Making the asssumption that all log files have the neurons in the same order
     for (int i = 0; i < 5; i++) {
         neurons.push_back(std::vector<size_t>());
     }
 
     for (std::string line : lines) {
-        std::vector<std::string> tokens = libsee::SplitStringWhitespace(line);
-        if (libsee::ToLower(tokens[0]) == "associate") {
+        std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
+        if (libcee::ToLower(tokens[0]) == "associate") {
             idx += 1;
         } else {
-            neurons[idx].push_back(libsee::FromString<size_t>(tokens[0]));
+            neurons[idx].push_back(libcee::FromString<size_t>(tokens[0]));
         }
     }
 
@@ -195,7 +213,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         return false;
     }
 
-    // Find the ROI using the mask
+    // Find the ROI using the mask - Do this on a smaller version of the image for speed.
     ImageU8L3D smaller = Clone(neuron_mask);
     smaller = Resize(neuron_mask, neuron_mask.width / 2, neuron_mask.height/ 2, neuron_mask.depth/ 2);
 
@@ -206,7 +224,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
 
     // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ROI roi_found = FindROICentred(smaller, d / 2, depth / 2);
+    ROI roi_found = FindROI(smaller, d / 2, depth / 2);
     roi.x = roi_found.x * 2;
     roi.y = roi_found.y * 2;
     roi.z = roi_found.z * 2; 
@@ -214,11 +232,11 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.depth = roi_found.depth * 2;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     
-    std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log_path), "_.");
-    std::string image_id = libsee::StringRemove(tokens_log[0], "ID");
+    std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(log_path), "_.");
+    std::string image_id = libcee::StringRemove(tokens_log[0], "ID");
 
     if (options.rename == true) {
-        image_id = libsee::IntToStringLeadingZeroes(image_idx, 5);
+        image_id = libcee::IntToStringLeadingZeroes(image_idx, 5);
         std::cout << "Renaming " <<  tiff_path << " to " << image_id << std::endl;
     }
 
@@ -233,17 +251,17 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         ROTS.push_back(RandRot());
     }
 
-    // Now generate the masks - run in parallel
-    libsee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
+    // Now generate the augmented masks - run in parallel
+    libcee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
     std::vector<std::future<int>> futures;
 
     for (int i = 0; i < options.num_augs; i++){
         futures.push_back(pool.execute( [i, output_path, options, image_id, cropped] () {  
-            std::string aug_id  = libsee::IntToStringLeadingZeroes(i, 2);
+            std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
             ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
             ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
-            WriteFITS(output_path, mipped);
+            SaveFITS(output_path, mipped);
             return i;
         }));
     }
@@ -294,26 +312,26 @@ int main (int argc, char ** argv) {
                 options.threeclass = true;
                 break;
             case 'n':
-                options.offset_number = libsee::FromString<int>(optarg);
+                options.offset_number = libcee::FromString<int>(optarg);
                 image_idx = options.offset_number;
                 break;
             case 'z':
-                options.depth = libsee::FromString<int>(optarg);
+                options.depth = libcee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = libsee::FromString<int>(optarg);
+                options.width = libcee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = libsee::FromString<int>(optarg);
+                options.height = libcee::FromString<int>(optarg);
                 break;
             case 's':
-                options.stacksize = libsee::FromString<int>(optarg);
+                options.stacksize = libcee::FromString<int>(optarg);
                 break;
             case 'j':
-                options.roi_xy = libsee::FromString<int>(optarg);
+                options.roi_xy = libcee::FromString<int>(optarg);
                 break;
             case 'q':
-                options.num_augs = libsee::FromString<int>(optarg);
+                options.num_augs = libcee::FromString<int>(optarg);
                 break;
         }
     }
@@ -338,27 +356,27 @@ int main (int argc, char ** argv) {
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
         bool paired = false;
-        std::vector<std::string> tokens = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_anno), "_.-");
+        std::vector<std::string> tokens = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
 
         for (std::string log : log_files) {
-            std::vector<std::string> tokens_log = libsee::SplitStringChars(libsee::FilenameFromPath(log), "_.-");
+            std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
                 
                 for (std::string tiff_input : tiff_input_files) {
                     // Find the matching input stack
-                    std::vector<std::string> tokens1 = libsee::SplitStringChars(libsee::FilenameFromPath(tiff_input), "_.-");
+                    std::vector<std::string> tokens1 = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_input), "_.-");
                     int tidx = 0;
 
                     for (std::string t : tokens1) {
-                        if (libsee::StringContains(t, "AutoStack")) {
+                        if (libcee::StringContains(t, "AutoStack")) {
                             break;
                         }
                         tidx += 1;
                     }
                     
-                    int ida = libsee::FromString<int>(libsee::StringRemove(tokens1[tidx], "0xAutoStack"));
-                    int idb = libsee::FromString<int>(libsee::StringRemove(id, "ID"));
+                    int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
+                    int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
 
                     if (ida == idb) {
                         try {

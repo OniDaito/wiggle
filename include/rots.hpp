@@ -12,8 +12,8 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <libsee/string.hpp>
-#include <libsee/file.hpp>
+#include <libcee/string.hpp>
+#include <libcee/file.hpp>
 #include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
@@ -57,13 +57,14 @@
  * 
  */
 
+
 template<typename T>
 T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
     assert(image.width == image.height);
     assert(cube_dim < image.width);
     assert(cube_dim / zscale < image.depth);
 
-    T resampled(image.width, image.height, image.width);
+    T resampled(image.width, image.width, image.width);
 
     // Essentially, we want a cube, smaller than the input image.
     // Z is a special case and requires scaling.
@@ -145,6 +146,37 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
     }
 
     return augmented;
+}
+
+// Same as above but for the graph
+// Returns the graph but in augmented co-ordinates to match the images
+
+void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &rgraph, glm::quat rot, size_t image_width, size_t final_dim, float zscale) {
+    assert(graph.size() == 4);
+    assert(rgraph.size() == 0);
+
+    for (int i = 0; i < 4; i++) {
+        float fz = static_cast <float>(graph[i].z * zscale);
+        float fx = static_cast <float>(graph[i].x);
+        float fy = static_cast <float>(graph[i].y);
+
+        fx = (fx / static_cast <float>(image_width) * 2.0) - 1.0;
+        fy = (fy / static_cast <float>(image_width) * 2.0) - 1.0;
+        fz = (fz / static_cast <float>(image_width) * 2.0) - 1.0;
+
+        float aug_ratio = static_cast<float>(final_dim) / static_cast<float>(image_width);
+
+        glm::mat4 rotmat = glm::toMat4(rot);
+        glm::vec4 v = glm::vec4(fx * aug_ratio, fy * aug_ratio, fz * aug_ratio, 1.0);
+        v = rotmat * v;
+
+        glm::vec4 tg ( static_cast<float>((v.x + 1.0) / 2.0 * final_dim),
+            static_cast<float>((v.y + 1.0) / 2.0 * final_dim),
+           static_cast<float>( (v.z + 1.0) / 2.0 * final_dim), 1.0f);
+  
+        rgraph.push_back(tg);
+    }
+
 }
 
 glm::quat RandRot();

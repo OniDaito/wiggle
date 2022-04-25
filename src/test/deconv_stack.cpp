@@ -44,7 +44,7 @@ TEST_CASE("Testing Deconvolution with a stack") {
     }
 
     std::string path_deconv("./images/test/worm3d_deconv.fits");
-    WriteFITS(path_deconv, gauss_stack);
+    SaveFITS(path_deconv, gauss_stack);
 
     // Normalise, constrast then sum
     std::function<float(float)> contrast = [](float x) { return x * x; };
@@ -52,30 +52,30 @@ TEST_CASE("Testing Deconvolution with a stack") {
     ImageF32L normalised = Normalise(summed);
     //normalised = ApplyFunc(normalised, contrast);
     std::string path_flat("./images/test/worm_deconv.fits");
-    WriteFITS(path_flat, normalised);
+    SaveFITS(path_flat, normalised);
     
 
     ImageF32L summed_orig = Project(converted, ProjectionType::SUM);
     ImageF32L normalised_orig = Normalise(summed_orig);
     std::string path_orig("./images/test/worm_orig.fits");
-    WriteFITS(path_orig, normalised_orig);
+    SaveFITS(path_orig, normalised_orig);
 
 
     std::string path_diff("./images/test/worm_diff.fits");
     ImageF32L diff = Sub(normalised_orig, normalised);
-    WriteFITS(path_diff, diff);
+    SaveFITS(path_diff, diff);
 
 
     ImageF32L contrasted = ApplyFunc(normalised, contrast);
     ImageF32L renormalised = Normalise(contrasted);
     std::string path_cont("./images/test/worm_contrast.fits");
-    WriteFITS(path_cont, renormalised);
+    SaveFITS(path_cont, renormalised);
 
 
     std::string path_final("./images/test/worm3d_final.fits");
     ImageF32L3D normalised3d = Normalise(gauss_stack);
     ImageF32L3D contrast3d = ApplyFunc(normalised3d, contrast);
     ImageF32L3D renormalised3d = Normalise(contrast3d);
-    WriteFITS(path_final, renormalised3d);
+    SaveFITS(path_final, renormalised3d);
 
 }

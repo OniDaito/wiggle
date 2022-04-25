@@ -11,8 +11,8 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <libsee/string.hpp>
-#include <libsee/file.hpp>
+#include <libcee/string.hpp>
+#include <libcee/file.hpp>
 #include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>
@@ -30,7 +30,6 @@ typedef struct {
 } ROI;
 
 ROI FindROI(imagine::ImageU16L3D &input, size_t xy, size_t depth);
-ROI FindROICentred(imagine::ImageU16L3D &input, size_t xy, size_t depth);
-ROI FindROICentred(imagine::ImageU8L3D &input, size_t xy, size_t depth);
+ROI FindROI(imagine::ImageU8L3D &input, size_t xy, size_t depth);
 
 #endif

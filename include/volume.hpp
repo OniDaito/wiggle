@@ -11,8 +11,8 @@
 
 #include <getopt.h>
 #include <fitsio.h>
-#include <libsee/string.hpp>
-#include <libsee/file.hpp>
+#include <libcee/string.hpp>
+#include <libcee/file.hpp>
 #include <imagine/imagine.hpp>
 #include <vector>
 #include <algorithm>

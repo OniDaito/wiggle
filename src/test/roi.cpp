@@ -20,7 +20,7 @@ TEST_CASE("Testing ROI crop") {
     std::string path1("./images/worm3d_cropped.tif");
     SaveTiff(path1, test_image0_cropped);
 
-    ROI roi2 = FindROICentred(test_image0, 200, 40);
+    ROI roi2 = FindROI(test_image0, 200, 40);
     ImageU16L3D test_image1_cropped = Crop(test_image0, roi2.x, roi2.y, roi2.z, 200, 200, 40);
     CHECK(test_image1_cropped.width == 200);
     CHECK(test_image1_cropped.height == 200);
