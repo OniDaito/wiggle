@@ -151,7 +151,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
 // Same as above but for the graph
 // Returns the graph but in augmented co-ordinates to match the images
 
-void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &rgraph, glm::quat rot, size_t image_width, size_t final_dim, float zscale) {
+void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &rgraph, glm::quat rot, size_t image_dim, size_t final_dim, float zscale) {
     assert(graph.size() == 4);
     assert(rgraph.size() == 0);
 
@@ -160,20 +160,24 @@ void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &r
         float fx = static_cast <float>(graph[i].x);
         float fy = static_cast <float>(graph[i].y);
 
-        fx = (fx / static_cast <float>(image_width) * 2.0) - 1.0;
-        fy = (fy / static_cast <float>(image_width) * 2.0) - 1.0;
-        fz = (fz / static_cast <float>(image_width) * 2.0) - 1.0;
-
-        float aug_ratio = static_cast<float>(final_dim) / static_cast<float>(image_width);
+        fx = (fx / static_cast <float>(image_dim) * 2.0) - 1.0;
+        fy = (fy / static_cast <float>(image_dim) * 2.0) - 1.0;
+        fz = (fz / static_cast <float>(image_dim) * 2.0) - 1.0;
 
         glm::mat4 rotmat = glm::toMat4(rot);
-        glm::vec4 v = glm::vec4(fx * aug_ratio, fy * aug_ratio, fz * aug_ratio, 1.0);
+        glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
         v = rotmat * v;
 
-        glm::vec4 tg ( static_cast<float>((v.x + 1.0) / 2.0 * final_dim),
-            static_cast<float>((v.y + 1.0) / 2.0 * final_dim),
-           static_cast<float>( (v.z + 1.0) / 2.0 * final_dim), 1.0f);
+        glm::vec4 tg ( static_cast<float>((v.x + 1.0) / 2.0 * image_dim),
+            static_cast<float>((v.y + 1.0) / 2.0 * image_dim),
+           static_cast<float>( (v.z + 1.0) / 2.0 * image_dim), 1.0f);
+
+        float roi_shift = ( image_dim - final_dim ) / 2.0f;
   
+        tg.x = tg.x - roi_shift;
+        tg.y = tg.y - roi_shift;
+        tg.z = tg.z - roi_shift;
+
         rgraph.push_back(tg);
     }
 

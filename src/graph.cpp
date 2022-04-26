@@ -22,6 +22,7 @@
 #include <libcee/file.hpp>
 #include <libcee/threadpool.hpp>
 #include <imagine/imagine.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -66,24 +67,22 @@ std::vector<glm::quat> ROTS;
  */
 
 ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise) {
-    // Find ROI on a half-sized image as it's much faster.
-    ImageU16L3D prefinal = Clone(image_in);
-    prefinal = Crop(prefinal, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
-    return converted;
 
     // Perform a subtraction on the images, removing background
     converted = Sub(converted, noise, true);
 
+    // Contrast
     //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
     //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
 
     // Deconvolve with a known PSF
     std::string path_kernel("./images/PSF3.tif");
     ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 10);
+    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
     
     return deconved;
 }
@@ -103,8 +102,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
     ImageU16L3D stacked(image.width, image.height / (options.stacksize * options.channels), options.stacksize);
     uint coff = 0;
-    stacked.depth -= 1;
-    stacked.data.pop_back();
 
     if (options.bottom) {
         coff = stacked.height;
@@ -112,12 +109,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     for (uint32_t d = 0; d < stacked.depth; d++) {
         for (uint32_t y = 0; y < stacked.height; y++) {
-            // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
-                // val = std::max(val - options.cutoff, 0);
-                stacked.data[d][stacked.height - y - 1][x] = val;
-                //stacked.data[d][y][x] = val;
+                stacked.data[d][y][x] = val;
             }
         }
     }
@@ -143,12 +137,13 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     for (int i = 0; i < options.num_augs; i++){
         futures.push_back(pool.execute( [i, output_path, options, image_id, processed] () {  
             // Rotate, normalise then sum projection
-            glm::quat q = ROTS[i];
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale);
+            glm::quat q = ROTS[i];
+            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale); 
             ImageF32L summed = Project(rotated, ProjectionType::SUM);
             ImageF32L normalised = Normalise(summed);
+            FlipVerticalI(normalised);
             SaveFITS(output_path, normalised);
             return i;
         }));
@@ -227,7 +222,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
 
-    std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << std::endl;
+    std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << ", " << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Read the dat file and write out the coordinates in order as an entry in a CSV file
@@ -263,6 +258,8 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     
     for (int i = 1; i < options.num_augs; i++) {
         ROTS.push_back(RandRot());
+        glm::quat r = glm::angleAxis(glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        ROTS.push_back(r);
     }
 
     for (int i = 0; i < options.num_augs; i++){
@@ -272,10 +269,11 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
         ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
+        FlipVerticalI(mipped);
         SaveFITS(output_path, mipped);
 
         std::vector<glm::vec4> tgraph;
-        AugmentGraph(graph, tgraph, ROTS[i], cropped.width, options.roi_xy, options.depth_scale);
+        AugmentGraph(graph, tgraph, glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
 
         // Graph will also have been augmented so save that too
         glm::mat4 rotmat = glm::toMat4(ROTS[i]);
@@ -286,7 +284,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             std::string y = libcee::ToString(av.y);
             std::string z = libcee::ToString(av.z);
             csv_line += x + ", " + y + ", " + z + ", "; 
-
         }
 
         csv_line = libcee::rtrim(csv_line);

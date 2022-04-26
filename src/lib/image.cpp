@@ -65,9 +65,9 @@ bool SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out, std::vector<std::vect
                         neuron_set = true;
                         uint8_t nval = id_to_write;
                         if (flip_depth) {
-                            image_out.data[image_out.depth - d - 1][y][x] = nval;
+                            image_out.data[image_out.depth - d - 1][image_out.height - y - 1][x] = nval;
                         } else {
-                            image_out.data[d][y][x] = nval;
+                            image_out.data[d][image_out.height - y - 1][x] = nval;
                         }
                     } 
                 }
