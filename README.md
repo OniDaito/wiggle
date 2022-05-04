@@ -32,17 +32,14 @@ For a faster release build:
 
 ## Running
 
-multiset
+Graph runs as follows:
 
-    ./build/multiset -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset
+    ./release/graph -t -r -q 10 -j 200 -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180302-QL285-d0.0 -l /phd/wormz/queelim/dataset_aug6/log.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180302-QL285-d0.0 -o /phd/wormz/queelim/dataset_aug6 >> dataset.log
 
-If we want to get the ROI of these images
+Single runs as follows:
 
-    ./build/multiset -b -r -i /media/stuff/Projects/wormz/queelim/Solange_analysisImages/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0 -o /media/stuff/Projects/wormz/queelim/dataset -z 25 -w 320 -h 150 -c -j 128 -k 128 -l 25
+    ./release/single -i /media/proto_backup/wormz/queelim/ins-6-mCherry/20170804-QL923_SB3-d1.0/QL923_SB3-d1.0xAutoStack54.tiff -w /media/proto_backup/wormz/queelim/ins-6-mCherry/Annotation/20170804-QL923_SB3-d1.0/ID54_WS2.tiff -a /media/proto_backup/wormz/queelim/ins-6-mCherry/Annotation/20170804-QL923_SB3-d1.0/ID54_2.log -o /media/proto_backup/wormz/queelim/temp
 
-Counting the flourescence from a saved log file from multiset, repl.acing the /media/proto_backup/wormz/queelim with /phd/wormz/queelim so we get the paths to the dat files right (optional)
-
-    ./fluro -i /media/proto_backup/wormz/queelim/dataset_21_10_2021/dataset.log -p /media/proto_backup/wormz/queelim -m /phd/wormz/queelim > //media/proto_backup/wormz/queelim/dataset_21_10_2021/fluoro.csv
 
 ### Command line parameters
 

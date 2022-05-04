@@ -16,7 +16,7 @@ project_dir  = meson.current_source_dir() # MESON_SOURCE_ROOT
 compiler = meson.get_compiler('cpp')
 
 imagine = dependency('imagine')
-libcee = dependency('libcee')
+libcee = dependency('cee')
 glfw = dependency('glfw3')
 
 # The include directories for the dependencies inside this project
@@ -44,8 +44,7 @@ executable('volume',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine, glfw],
-          link_with : wiggle,
-          link_args : '-Wl,-lstdc++fs,-lpthread')
+          link_with : wiggle)
 
 # Single pair
 executable('single',
@@ -54,7 +53,7 @@ executable('single',
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
           link_with : wiggle,
-          link_args : '-Wl,-lstdc++fs,-lpthread')
+          link_args : '-Wl,-lpthread')
 
 # Graph
 executable('graph',
@@ -63,7 +62,7 @@ executable('graph',
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
           link_with : wiggle,
-          link_args : '-Wl,-lstdc++fs,-lpthread')
+          link_args : '-Wl,-lpthread')
 
 # Tests
 test_basic = executable('test_basic',
