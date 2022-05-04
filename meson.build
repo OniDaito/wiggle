@@ -44,7 +44,8 @@ executable('volume',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine, glfw],
-          link_with : wiggle)
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
 
 # Single pair
 executable('single',
