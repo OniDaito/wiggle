@@ -125,20 +125,27 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
-    if (options.threeclass) {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
-    } else {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
+    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
+
+    if (!n1 && !n2 && !n3 && !n4) {
+        std::cout << "Failed to find neurons in mask." << std::endl;
+        return false;
     }
 
+  
     std::string output_path = options.output_path  + "/mask.fits";
     SaveFITS(output_path , neuron_mask);
+
+    ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(Project(neuron_mask, ProjectionType::MAX_INTENSITY)));
+    uint8_t min, max;
+    MinMax(jpeged, min, max); 
+    std::cout << "Max Val JPG: " << static_cast<int>(min) << ", " << static_cast<int>(max) << std::endl; 
+
+    std::string output_path_jpg = options.output_path + "/mask_mipped.jpg";
+    SaveJPG(output_path_jpg, jpeged);
 
     return true;
 }

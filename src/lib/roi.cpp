@@ -14,27 +14,17 @@
 
 using namespace imagine;
 
+
 ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
     size_t step_size = 5; // For speed we don't go with 1
     size_t step_depth = 1; // 1 for depth as it's shorter
     size_t num_threads = 4; // One for each quadrant
 
     libcee::ThreadPool pool{ static_cast<size_t>(num_threads) }; // 1 thread per ROI
-    std::vector<std::future<int>> futures;
+    std::vector<std::future<ROI>> futures;
 
     // Lambda function that we will eventually thread
     std::vector<ROI> rois;
-
-    for (int i = 0; i < num_threads; i++) {
-        ROI roi;
-        roi.sum = 0;
-        roi.x = 0;
-        roi.y = 0;
-        roi.z = 0;
-        roi.xy_dim = xy;
-        roi.depth = depth;
-        rois.push_back(roi);
-    }
 
     unsigned int t_width = int(input.width / 2);
     unsigned int t_height = int(input.height / 2);
@@ -57,12 +47,15 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
         int w = xy;
         int h = xy;
         int d = depth;
-
-        ROI *troi = &rois[i]; // Bit naughty, using a raw pointer here :/
  
         futures.push_back(pool.execute(
 
-            [input, troi, xs, ys, zs, xe, ye, ze, w, h, d, step_size, step_depth] () {
+            [input, xs, ys, zs, xe, ye, ze, w, h, d, step_size, step_depth] () {
+                ROI troi;
+                troi.sum = 0;
+                troi.x = 0;
+                troi.y = 0;
+                troi.z = 0;
 
                 for (size_t zi = zs; zi + d - 1 < ze; zi += step_depth) {
                     for (size_t yi = ys; yi + h -1 < ye; yi += step_size) {
@@ -78,21 +71,21 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
                                 }
                             }
 
-                            if (sum > troi->sum){
-                                troi->x = xi;
-                                troi->y = yi;
-                                troi->z = zi;
-                                troi->sum = sum;
+                            if (sum > troi.sum){
+                                troi.x = xi;
+                                troi.y = yi;
+                                troi.z = zi;
+                                troi.sum = sum;
                             }
                         }
                     }
                 }
-                return 1;
+                return troi;
             }
         ));
     }
 
-    for (auto &fut : futures) { fut.get(); }
+    for (auto &fut : futures) { rois.push_back(fut.get()); }
 
     ROI roi;
     roi.sum = 0;
@@ -109,29 +102,32 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
         }
     }
 
-
     return roi;
 }
 
 
-void FindCOM(ImageU8L3D &input, int &cx, int &cy, int &cz, double &sum) {
-    double dx, dy, dz = 0;
+void FindCOM(ImageU8L3D &input, int &cx, int &cy, int &cz, int &sum) {
+    float dx = 0, dy = 0, dz = 0, tsum = 0;
 
     for (int z = 0; z < input.depth; z++) {
         for (int y = 0; y < input.height; y++) {
             for (int x = 0; x < input.width; x++) {
                 if (input.data[z][y][x] != 0) {
-                    dx += x;
-                    dy += y;
-                    dz += z;
-                    sum += input.data[z][y][x];
+                    dx += static_cast<float>(x);
+                    dy += static_cast<float>(y);
+                    dz += static_cast<float>(z);
+                    tsum += static_cast<float>(input.data[z][y][x]);
                 }
             }
         }
     }
-    cx = int(dx / sum);
-    cy = int(dy / sum);
-    cz = int(dz / sum);
+
+    if (tsum > 0) {
+        cx = static_cast<int>(floor(dx / tsum));
+        cy = static_cast<int>(floor(dy / tsum));
+        cz = static_cast<int>(floor(dz / tsum));
+    }
+
 }
 
 ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
@@ -140,21 +136,10 @@ ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
     size_t num_threads = 4;
 
     libcee::ThreadPool pool{ static_cast<size_t>(num_threads) }; // 1 thread per ROI
-    std::vector<std::future<int>> futures;
+    std::vector<std::future<ROI>> futures;
 
     // Lambda function that we will eventually thread
     std::vector<ROI> rois;
-
-    for (int i = 0; i < num_threads; i++) {
-        ROI roi;
-        roi.sum = 0;
-        roi.x = 0;
-        roi.y = 0;
-        roi.z = 0;
-        roi.xy_dim = xy;
-        roi.depth = depth;
-        rois.push_back(roi);
-    }
 
     unsigned int t_width = int(input.width / 2);
     unsigned int t_height = int(input.height / 2);
@@ -167,55 +152,59 @@ ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
     std::vector<unsigned int> starts_y = {0, t_height - overlap, 0, t_height - overlap};
     std::vector<unsigned int> ends_y = {t_height + overlap, input.height, t_height + overlap, input.height};
     
-    for (int i = 0; i <num_threads; i++) {
-        int xs = starts_x[i];
-        int ys = starts_y[i];
+    for (int thread_id = 0; thread_id <num_threads; thread_id++) {
+        int xs = starts_x[thread_id];
+        int ys = starts_y[thread_id];
         int zs = 0;
-        int xe = ends_x[i];
-        int ye = ends_y[i];
+        int xe = ends_x[thread_id];
+        int ye = ends_y[thread_id];
         int ze = input.depth;
         int w = xy;
         int h = xy;
         int d = depth;
 
-        ROI *troi = &rois[i]; // Bit naughty, using a raw pointer here :/
- 
         futures.push_back(pool.execute(
 
-            [input, troi, xs, ys, zs, xe, ye, ze, w, h, d, step_size, step_depth] () {
+            [input, xs, ys, zs, xe, ye, ze, w, h, d, step_size, step_depth] () {
                 double dd = w * w + h * h + d * d;
                 double hw = w / 2;
                 double hh = h / 2;
                 double hd = d / 2;
+                ROI troi;
+                troi.sum = 0;
+                troi.x = 0;
+                troi.y = 0;
+                troi.z = 0;
 
                 for (size_t zi = zs; zi + d - 1 < ze; zi += step_depth) {
                     for (size_t yi = ys; yi + h -1 < ye; yi += step_size) {
                         for (size_t xi = xs; xi + w -1 < xe; xi += step_size) {
                             ImageU8L3D cropped = Crop(input, xi, yi, zi, w, h, d);
-                            int cx, cy, cz = 0;
-                            double sum = 0;
+                            int cx = 0, cy = 0, cz = 0;
+                            int sum = 0;
                             FindCOM(cropped, cx, cy, cz, sum);
 
-                            if (sum >= troi->sum) {                                
+                            if (sum >= troi.sum) {                                
                                 double df = (cx - hw) *  (cx - hw) + (cy - hh) * (cy - hh) + (cz - hd) * (cz - hd);
-                                
+
                                 if (df < dd) {
-                                    troi->x = xi;
-                                    troi->y = yi;
-                                    troi->z = zi;
-                                    troi->sum = sum;
+                                    troi.x = xi;
+                                    troi.y = yi;
+                                    troi.z = zi;
+                                    troi.sum = sum;
                                     dd = df;
                                 }
                             }
                         }
                     }
                 }
-                return 1;
+      
+                return troi;
             }
         ));
     }
 
-    for (auto &fut : futures) { fut.get(); }
+    for (auto &fut : futures) { rois.push_back(fut.get()); }
 
     ROI roi;
     roi.sum = 0;
@@ -225,10 +214,30 @@ ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
     roi.xy_dim = xy;
     roi.depth = depth;
 
+    double hw = xy / 2;
+    double hh = xy / 2;
+    double hd = depth / 2;
+    double dd = xy * xy + xy * xy+ depth * depth;
+
+
     for (int i = 0; i < num_threads; i++) {
         ROI troi = rois[i];
-        if (troi.sum > roi.sum) {
-            roi = troi;
+
+        if (troi.sum >= roi.sum) {
+            ImageU8L3D cropped = Crop(input, troi.x, troi.y, troi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+            int cx, cy, cz = 0;
+            int sum = 0;
+            FindCOM(cropped, cx, cy, cz, sum);
+
+            double df = (cx - hw) *  (cx - hw) + (cy - hh) * (cy - hh) + (cz - hd) * (cz - hd);
+                
+            if (df < dd) {
+                roi.sum = troi.sum;
+                roi.x = troi.x;
+                roi.y = troi.y;
+                roi.z = troi.z;
+                dd = df;
+            }
         }
     }
 

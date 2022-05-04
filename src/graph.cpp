@@ -272,6 +272,10 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         FlipVerticalI(mipped);
         SaveFITS(output_path, mipped);
 
+        ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(mipped));
+        std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.jpg";
+        SaveJPG(output_path_jpg, jpeged);
+
         std::vector<glm::vec4> tgraph;
         AugmentGraph(graph, tgraph, glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
 
