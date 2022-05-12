@@ -16,9 +16,15 @@ This program works on the analysis files, creating a set of different png images
 
 This project is built with [meson]() and either [gcc]() or [clang](). It requires the following libraries:
 
-* [masamune]()
+* [libcee]()
+* [imagine]()
 * [libtiff]()
 * [libpng]()
+* [libglfw3]()
+
+Under debian, you can install most of these with the following command
+
+    apt-get install libglfw3-dev libpng-dev libcfitsio-dev libjpeg-dev fftw3-dev libtiff-dev
 
 The build commands are as follows:
 

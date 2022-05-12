@@ -65,6 +65,15 @@ executable('graph',
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
+# three
+executable('three',
+          'src/three.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
 # Tests
 test_basic = executable('test_basic',
   'src/test/basic.cpp',
