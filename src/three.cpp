@@ -362,6 +362,8 @@ int main (int argc, char ** argv) {
         bool paired = false;
         std::vector<std::string> tokens = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
+        std::string mask_path = options.output_path + "/" + options.prefix + libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
+
 
         for (std::string log : log_files) {
             std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(log), "_.-");
@@ -385,7 +387,6 @@ int main (int argc, char ** argv) {
                             
                             int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
                             int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
-                            std::string mask_path = options.output_path + "/" + options.prefix + libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
 
                             if (ida == idb) {
                                 try {
@@ -395,15 +396,12 @@ int main (int argc, char ** argv) {
                                         if (TiffToFits(options, tiff_input, image_idx, roi)) {
                                             std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
                                             paired = true;
-                                        } else {
-                                            remove(mask_path.c_str());
                                         }
                                     }
                                     image_idx += 1;
                                     break;
                                 } catch (const std::exception &e) {
                                     std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
-                                    remove(mask_path.c_str());
                                 }
                             }
                         }
@@ -414,6 +412,7 @@ int main (int argc, char ** argv) {
 
         if (!paired){
             std::cout << "Failed to pair " << tiff_anno << std::endl;
+            remove(mask_path.c_str());
         }
     }
 
