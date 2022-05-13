@@ -32,6 +32,7 @@ typedef struct {
     std::string image_path = ".";
     std::string output_path = ".";
     std::string annotation_path = ".";
+    std::string output_log_path = ".";
     std::string prefix = "";
     bool rename = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
@@ -149,7 +150,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
  * @return bool if success or not
  */
 
-bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, int image_idx, ROI &roi) {
+bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, std::string &coord_path, int image_idx, ROI &roi) {
     std::vector<std::string> lines = libcee::ReadFileLines(log_path);
     ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
@@ -190,6 +191,9 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         return false;
     }
 
+    std::ofstream out_stream; //ofstream is the class for fstream package
+    out_stream.open(options.output_log_path, std::ios::app);
+
     // Find the ROI using the mask - Do this on a smaller version of the image for speed.
     ImageU8L3D smaller = Clone(neuron_mask);
     smaller = Resize(neuron_mask, neuron_mask.width / 2, neuron_mask.height/ 2, neuron_mask.depth/ 2);
@@ -221,6 +225,47 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
     SaveFITS(output_path, cropped);
      
+    // Now write out the graph co-ords
+     // Read the dat file and write out the coordinates in order as an entry in a CSV file
+    lines = libcee::ReadFileLines(coord_path);
+    if(lines.size() != 4) {  return false; }
+
+    // Should be ASI-1, ASI-2, ASJ-1, ASJ-2
+    std::vector<glm::vec4> graph;
+    std::string csv_line =  libcee::IntToStringLeadingZeroes(image_idx, 5) + ", ";
+
+
+    for (std::string line : lines) {
+        std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
+        std::string x = libcee::RemoveChar(libcee::RemoveChar(tokens[4], ','), ' ');
+        std::string y = libcee::RemoveChar(libcee::RemoveChar(libcee::RemoveChar(tokens[3], ','), ' '), '[');
+        std::string z = libcee::RemoveChar(libcee::RemoveChar(libcee::RemoveChar(tokens[5], ','), ' '), ']');
+        glm::vec4 p = glm::vec4(libcee::FromString<float>(x), libcee::FromString<float>(y), libcee::FromString<float>(z), 1.0f);
+        
+        // Must have all 4 neurons for now
+        if (p.x == 0 && p.y == 0 && p.z == 0) {
+            return false;
+        }
+
+        p.x = p.x - roi.x;
+        p.y = p.y - roi.y;
+        p.z = p.z - roi.z;
+
+        graph.push_back(p);
+    }
+
+    for (int j = 0; j < 4; j++){
+        glm::vec4 av = graph[j];
+        std::string x = libcee::ToString(av.x);
+        std::string y = libcee::ToString(av.y);
+        std::string z = libcee::ToString(av.z);
+        csv_line += x + ", " + y + ", " + z + ", "; 
+    }
+
+    csv_line = libcee::rtrim(csv_line);
+    csv_line = libcee::rtrim(csv_line);
+    out_stream << csv_line << std::endl;
+
     return true;
 }
 
@@ -239,7 +284,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbn:z:w:h:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:l:p:rtbn:z:w:h:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -252,6 +297,9 @@ int main (int argc, char ** argv) {
             case 'o' :
                 options.output_path = std::string(optarg);
                 image_idx = GetOffetNumber(options.output_path);
+                break;
+            case 'l' :
+                options.output_log_path = std::string(optarg);
                 break;
             case 'p' :
                 options.prefix = std::string(optarg);
@@ -284,9 +332,6 @@ int main (int argc, char ** argv) {
             case 'j':
                 options.roi_xy = libcee::FromString<int>(optarg);
                 break;
-            case 'q':
-                options.num_augs = libcee::FromString<int>(optarg);
-                break;
         }
     }
 
@@ -300,6 +345,9 @@ int main (int argc, char ** argv) {
 
     // Next, find the annotation log files
     std::vector<std::string> log_files = FindLogFiles(options.annotation_path);
+
+    // Next, find the annotation dat files
+    std::vector<std::string> dat_files = FindDatFiles(options.annotation_path);
 
     // Now find the input files
     std::cout << "Loading input images from " << options.image_path << std::endl;
@@ -316,36 +364,42 @@ int main (int argc, char ** argv) {
         for (std::string log : log_files) {
             std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(log), "_.-");
             if (tokens_log[0] == id) {
-                
-                for (std::string tiff_input : tiff_input_files) {
-                    // Find the matching input stack
-                    std::vector<std::string> tokens1 = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_input), "_.-");
-                    int tidx = 0;
 
-                    for (std::string t : tokens1) {
-                        if (libcee::StringContains(t, "AutoStack")) {
-                            break;
-                        }
-                        tidx += 1;
-                    }
+                for (std::string dat : dat_files) {
+                    std::vector<std::string> tokens_dat = libcee::SplitStringChars(libcee::FilenameFromPath(dat), "_.-");
+                    if (tokens_dat[0] == id) {
                     
-                    int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
-                    int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
+                        for (std::string tiff_input : tiff_input_files) {
+                            // Find the matching input stack
+                            std::vector<std::string> tokens1 = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_input), "_.-");
+                            int tidx = 0;
 
-                    if (ida == idb) {
-                        try {
-                            ROI roi;
-                            std::cout << "Stacking: " << tiff_input << std::endl;
-                            if (ProcessMask(options, tiff_anno, log, image_idx, roi)) {
-                                TiffToFits(options, tiff_input, image_idx, roi);
-                                std::cout << "Pairing " << tiff_anno << " with " << log << " and " << tiff_input << std::endl;
-                                paired = true;
+                            for (std::string t : tokens1) {
+                                if (libcee::StringContains(t, "AutoStack")) {
+                                    break;
+                                }
+                                tidx += 1;
                             }
-                          
-                            image_idx += 1;
-                            break;
-                        } catch (const std::exception &e) {
-                             std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
+                            
+                            int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
+                            int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
+
+                            if (ida == idb) {
+                                try {
+                                    ROI roi;
+                                    std::cout << "Stacking: " << tiff_input << std::endl;
+                                    if (ProcessMask(options, tiff_anno, log, dat, image_idx, roi)) {
+                                        TiffToFits(options, tiff_input, image_idx, roi);
+                                        std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
+                                        paired = true;
+                                    }
+                                
+                                    image_idx += 1;
+                                    break;
+                                } catch (const std::exception &e) {
+                                    std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
+                                }
+                            }
                         }
                     }
                 }
