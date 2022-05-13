@@ -139,6 +139,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     return true;
 }
 
+
+
 /**
  * Given a tiff file and a log file, create a set of 
  * images for each neuron we are interested in.
@@ -398,6 +400,8 @@ int main (int argc, char ** argv) {
                                     break;
                                 } catch (const std::exception &e) {
                                     std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
+                                    std::string output_path = options.output_path + "/" + options.prefix + libcee::ToString(image_idx) + "_mask.fits";
+                                    remove(output_path.c_str());
                                 }
                             }
                         }
