@@ -385,23 +385,25 @@ int main (int argc, char ** argv) {
                             
                             int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
                             int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
+                            std::string mask_path = options.output_path + "/" + options.prefix + libcee::ToString(image_idx) + "_mask.fits";
 
                             if (ida == idb) {
                                 try {
                                     ROI roi;
                                     std::cout << "Stacking: " << tiff_input << std::endl;
                                     if (ProcessMask(options, tiff_anno, log, dat, image_idx, roi)) {
-                                        TiffToFits(options, tiff_input, image_idx, roi);
-                                        std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
-                                        paired = true;
+                                        if TiffToFits(options, tiff_input, image_idx, roi) {
+                                            std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
+                                            paired = true;
+                                        } else {
+                                            remove(mask_path.c_str());
+                                        }
                                     }
-                                
                                     image_idx += 1;
                                     break;
                                 } catch (const std::exception &e) {
                                     std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
-                                    std::string output_path = options.output_path + "/" + options.prefix + libcee::ToString(image_idx) + "_mask.fits";
-                                    remove(output_path.c_str());
+                                    remove(mask_path.c_str());
                                 }
                             }
                         }
