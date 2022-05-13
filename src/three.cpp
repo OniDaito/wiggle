@@ -385,7 +385,7 @@ int main (int argc, char ** argv) {
                             
                             int ida = libcee::FromString<int>(libcee::StringRemove(tokens1[tidx], "0xAutoStack"));
                             int idb = libcee::FromString<int>(libcee::StringRemove(id, "ID"));
-                            std::string mask_path = options.output_path + "/" + options.prefix + libcee::ToString(image_idx) + "_mask.fits";
+                            std::string mask_path = options.output_path + "/" + options.prefix + libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
 
                             if (ida == idb) {
                                 try {
