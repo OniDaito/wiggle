@@ -392,7 +392,7 @@ int main (int argc, char ** argv) {
                                     ROI roi;
                                     std::cout << "Stacking: " << tiff_input << std::endl;
                                     if (ProcessMask(options, tiff_anno, log, dat, image_idx, roi)) {
-                                        if TiffToFits(options, tiff_input, image_idx, roi) {
+                                        if (TiffToFits(options, tiff_input, image_idx, roi)) {
                                             std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
                                             paired = true;
                                         } else {
