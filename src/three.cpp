@@ -134,6 +134,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
     ImageF32L3D processed = ProcessPipe(stacked, roi);
     ImageF32L3D normalised = Normalise(processed);
+    
+    // Flip vertically again for some reason
+    FlipVerticalI(normalised);
     SaveFITS(output_path, normalised);
          
     return true;
