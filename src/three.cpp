@@ -40,8 +40,11 @@ typedef struct {
     bool bottom = false;
     int channels = 2;           // 2 Channels initially in these images
     int depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
-    int width = 640;            // The desired dimensions
+    int width = 640;            // The input dimensions of each slice
     int height = 300;
+    int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
+    int final_width = 128;            // The input dimensions of each slice
+    int final_height = 128;
     int stacksize = 51;         // How many stacks in our input 2D image
     size_t roi_xy = 128;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
@@ -137,7 +140,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     
     // Flip vertically again for some reason
     FlipVerticalI(normalised);
-    SaveFITS(output_path, normalised);
+    ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
+    SaveFITS(output_path, resized);
          
     return true;
 }
@@ -228,7 +232,9 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
     std::string output_path = options.output_path + "/" + options.prefix + image_id + "_mask.fits";
     std::string output_path_png = options.output_path + "/" + options.prefix + image_id + "_mask.png";
-    SaveFITS(output_path, cropped);
+    ImageU8L3D resized = Resize(cropped, options.final_width, options.final_height, options.final_depth);
+
+    SaveFITS(output_path, resized);
      
     // Now write out the graph co-ords
      // Read the dat file and write out the coordinates in order as an entry in a CSV file
@@ -252,9 +258,13 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             return false;
         }
 
-        p.x = p.x - roi.x;
-        p.y = p.y - roi.y;
-        p.z = p.z - roi.z;
+        float rw = static_cast<float>(options.final_width) / static_cast<float>(cropped.width);
+        float rh = static_cast<float>(options.final_height) / static_cast<float>(cropped.height);
+        float rd = static_cast<float>(options.final_depth) / static_cast<float>(cropped.depth);
+
+        p.x = (p.x - roi.x) * rw;
+        p.y = (p.y - roi.y) * rh;
+        p.z = (p.z - roi.z) * rd;
 
         graph.push_back(p);
     }
@@ -323,13 +333,13 @@ int main (int argc, char ** argv) {
                 image_idx = options.offset_number;
                 break;
             case 'z':
-                options.depth = libcee::FromString<int>(optarg);
+                options.final_depth = libcee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = libcee::FromString<int>(optarg);
+                options.final_width = libcee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = libcee::FromString<int>(optarg);
+                options.final_height = libcee::FromString<int>(optarg);
                 break;
             case 's':
                 options.stacksize = libcee::FromString<int>(optarg);
@@ -343,7 +353,7 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
-    std::cout << "Output Size Width: " << options.width << ", Height: " << options.height << ", Depth: " << options.depth << std::endl;
+    std::cout << "Output Size Width: " << options.final_width << ", Height: " << options.final_height << ", Depth: " << options.final_depth << std::endl;
 
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
