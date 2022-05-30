@@ -287,7 +287,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         if (options.flatten){
             SaveFITS(output_path, resized);
         } else {
-            ImageU8L3D resized3d = Resize(cropped, options.final_width, options.final_height, options.final_depth);
+            ImageU8L3D resized3d = Resize(prefinal, options.final_width, options.final_height, options.final_depth);
             SaveFITS(output_path, resized3d);
         }
      
