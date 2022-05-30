@@ -66,7 +66,7 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
                             for (int i = 0; i < cropped.depth; i++) {
                                 for (int j = 0; j < cropped.height; j++) {
                                     for (int k = 0; k < cropped.width; k++) {
-                                        sum += static_cast<double>(cropped.data[i][j][k]);
+                                        sum += std::min(1.0, std::max(static_cast<double>(cropped.data[i][j][k]), 0.0));
                                     }
                                 }
                             }
@@ -116,7 +116,7 @@ void FindCOM(ImageU8L3D &input, int &cx, int &cy, int &cz, int &sum) {
                     dx += static_cast<float>(x);
                     dy += static_cast<float>(y);
                     dz += static_cast<float>(z);
-                    tsum += static_cast<float>(input.data[z][y][x]);
+                    tsum += std::min(1.0f, std::max(static_cast<float>(input.data[z][y][x]), 0.0f));
                 }
             }
         }
