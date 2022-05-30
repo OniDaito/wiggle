@@ -38,6 +38,7 @@ typedef struct {
     std::string annotation_path = ".";
     std::string prefix = "";
     bool rename = false;
+    bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
@@ -45,6 +46,9 @@ typedef struct {
     int depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
     int width = 640;            // The desired dimensions
     int height = 300;
+    int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
+    int final_width = 128;            // The input dimensions of each slice
+    int final_height = 128;
     int stacksize = 51;         // How many stacks in our input 2D image
     size_t roi_xy = 128;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
@@ -149,9 +153,16 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
             ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale);
-            ImageF32L summed = Project(rotated, ProjectionType::SUM);
-            ImageF32L normalised = Normalise(summed);
-            SaveFITS(output_path, normalised);
+            if (options.flatten) {
+                ImageF32L summed = Project(rotated, ProjectionType::SUM);
+                ImageF32L normalised = Normalise(summed);
+                ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
+                SaveFITS(output_path, resized);
+            } else {
+                ImageF32L3D normalised = Normalise(rotated);
+                ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
+                SaveFITS(output_path, resized);
+            }
             return i;
         }));
     }
@@ -260,8 +271,14 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
             ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
-            ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
-            SaveFITS(output_path, mipped);
+            if (options.flatten) {
+                ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
+                ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
+                SaveFITS(output_path, mipped);
+            } else {
+                ImageU8L3D resized = Resize(prefinal, options.final_width, options.final_height, options.final_depth);
+                SaveFITS(output_path, resized);
+            }
             return i;
         }));
     }

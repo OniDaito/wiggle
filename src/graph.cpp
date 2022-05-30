@@ -36,6 +36,7 @@ typedef struct {
     std::string prefix = "";
     std::string output_log_path = "";
     bool rename = false;
+    bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
@@ -44,6 +45,9 @@ typedef struct {
     int width = 640;            // The desired dimensions
     int height = 300;
     int stacksize = 51;         // How many stacks in our input 2D image
+    int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
+    int final_width = 128;            // The input dimensions of each slice
+    int final_height = 128;
     size_t roi_xy = 128;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
@@ -141,10 +145,19 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
             glm::quat q = ROTS[i];
             ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale); 
-            ImageF32L summed = Project(rotated, ProjectionType::SUM);
-            ImageF32L normalised = Normalise(summed);
-            FlipVerticalI(normalised);
-            SaveFITS(output_path, normalised);
+            if (options.flatten) {
+                ImageF32L summed = Project(rotated, ProjectionType::SUM);
+                ImageF32L normalised = Normalise(summed);
+                FlipVerticalI(normalised);
+                ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
+                SaveFITS(output_path, normalised);
+            } else {
+                ImageF32L3D normalised = Normalise(rotated);
+                FlipVerticalI(normalised);
+                ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.depth);
+                SaveFITS(output_path, normalised);
+            }
+            
             return i;
         }));
     }
@@ -270,9 +283,16 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
         FlipVerticalI(mipped);
-        SaveFITS(output_path, mipped);
+        ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
 
-        ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(mipped));
+        if (options.flatten){
+            SaveFITS(output_path, resized);
+        } else {
+            ImageU8L3D resized3d = Resize(cropped, options.final_width, options.final_height, options.final_depth);
+            SaveFITS(output_path, resized3d);
+        }
+     
+        ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
         std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.jpg";
         SaveJPG(output_path_jpg, jpeged);
 
@@ -282,11 +302,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         // Graph will also have been augmented so save that too
         glm::mat4 rotmat = glm::toMat4(ROTS[i]);
 
+        float rw = static_cast<float>(options.final_width) / static_cast<float>(cropped.width);
+        float rh = static_cast<float>(options.final_height) / static_cast<float>(cropped.height);
+        float rd = static_cast<float>(options.final_depth) / static_cast<float>(cropped.depth);
+
         for (int j = 0; j < 4; j++){
             glm::vec4 av = tgraph[j];
-            std::string x = libcee::ToString(av.x);
-            std::string y = libcee::ToString(av.y);
-            std::string z = libcee::ToString(av.z);
+            std::string x = libcee::ToString(av.x * rw);
+            std::string y = libcee::ToString(av.y * rh);
+            std::string z = libcee::ToString(av.z * rd);
             csv_line += x + ", " + y + ", " + z + ", "; 
         }
 
