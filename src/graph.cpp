@@ -206,9 +206,9 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
     // Set all neurons to 1 - we are only using the mask for the ROI
     n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 1);
-    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 1);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
 
     if (!n1 || !n2 || !n3 || !n4) {
         return false;
