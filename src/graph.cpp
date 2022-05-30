@@ -282,7 +282,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
         ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
-        FlipVerticalI(mipped);
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
 
         if (options.flatten){
