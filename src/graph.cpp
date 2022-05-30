@@ -150,12 +150,12 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 ImageF32L normalised = Normalise(summed);
                 FlipVerticalI(normalised);
                 ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
-                SaveFITS(output_path, normalised);
+                SaveFITS(output_path, resized);
             } else {
                 ImageF32L3D normalised = Normalise(rotated);
                 FlipVerticalI(normalised);
-                ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.depth);
-                SaveFITS(output_path, normalised);
+                ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
+                SaveFITS(output_path, resized);
             }
             
             return i;
