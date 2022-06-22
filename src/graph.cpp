@@ -167,6 +167,15 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
     return true;
 }
 
+bool is_csv_empty(std::string path) {
+    std::ifstream file(path);
+    if (!file){
+        return true;
+    }
+
+    return file.peek() == std::ifstream::traits_type::eof();
+}
+
 /**
  * Given a tiff file and a log file, create a set of 
  * images for each neuron we are interested in.
@@ -214,8 +223,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         return false;
     }
 
+    bool write_csv_header = is_csv_empty(options.output_log_path);
+
     std::ofstream out_stream; //ofstream is the class for fstream package
     out_stream.open(options.output_log_path, std::ios::app); 
+
+    if (write_csv_header) {
+        out_stream << "id,p0x,p0y,p0z,p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z" << std::endl;
+    }
+
 
     // Find the ROI using the mask - Do this on a smaller version of the image for speed.
 
