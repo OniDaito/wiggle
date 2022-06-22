@@ -251,6 +251,10 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
 
+    float rw = static_cast<float>(options.final_width) / static_cast<float>(cropped.width);
+    float rh = static_cast<float>(options.final_height) / static_cast<float>(cropped.height);
+    float rd = static_cast<float>(options.final_depth) / static_cast<float>(cropped.depth);
+
     std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << ", " << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
@@ -273,10 +277,9 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             return false;
         }
 
-        p.x = p.x - roi.x;
-        p.y = p.y - roi.y;
-        p.z = p.z - roi.z;
-
+        p.x = (p.x - roi.x) * rw;
+        p.y = (p.y - roi.y) * rh;
+        p.z = (p.z - roi.z) * rd;
         graph.push_back(p);
     }
 
@@ -319,10 +322,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         // Graph will also have been augmented so save that too
         glm::mat4 rotmat = glm::toMat4(ROTS[i]);
 
-        float rw = static_cast<float>(options.final_width) / static_cast<float>(cropped.width);
-        float rh = static_cast<float>(options.final_height) / static_cast<float>(cropped.height);
-        float rd = static_cast<float>(options.final_depth) / static_cast<float>(cropped.depth);
-
+    
         for (int j = 0; j < 4; j++){
             glm::vec4 av = tgraph[j];
             std::string x = libcee::ToString(av.x * rw);
