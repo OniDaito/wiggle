@@ -81,6 +81,7 @@ if __name__ == "__main__":
     if os.path.exists(args.data + "/log.csv"):
         with open(args.data + "/log.csv") as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
+
             for row in reader:
                 points = Points()
                 p0 = Point(float(row['p0x']), float(row['p0y']), float(row['p0z']), 1.0)
@@ -92,6 +93,7 @@ if __name__ == "__main__":
                 p3 = Point(float(row['p3x']), float(row['p3y']), float(row['p3z']), 1.0)
                 points.append(p3)
                 graphs.append(points)
+
     else:
         print("log.csv must exist along with the images.")
         assert(False)
