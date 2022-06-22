@@ -251,9 +251,9 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
 
-    float rw = static_cast<float>(options.final_width) / static_cast<float>(cropped.width);
-    float rh = static_cast<float>(options.final_height) / static_cast<float>(cropped.height);
-    float rd = static_cast<float>(options.final_depth) / static_cast<float>(cropped.depth);
+    float rw = static_cast<float>(options.final_width) / static_cast<float>(roi.xy_dim);
+    float rh = static_cast<float>(options.final_height) / static_cast<float>(roi.xy_dim);
+    float rd = static_cast<float>(options.final_depth) / static_cast<float>(roi.depth);
 
     std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << ", " << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
