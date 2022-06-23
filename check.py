@@ -101,11 +101,12 @@ if __name__ == "__main__":
         target_vol = f_out(new_depths)
         target_vol = target_vol.astype(np.uint8)
 
-        scalar = args.width / args.depth
     
         for i in range(len(points)):
-            points[i][2] = points[i][2] * scalar
-      
+            #points[i][0] = points[i][0]
+            #points[i][1] = points[i][1]
+            points[i][2] = (points[i][2] / args.depth) * args.width
+
         vedo_vol = Volume(target_vol, alpha=0.4, mode=1)
         vedo_points = Points(points, r=12).c('red')
         show(vedo_vol, vedo_points, __doc__, axes=1, viewup='y').close()

@@ -172,6 +172,8 @@ void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &r
             static_cast<float>((v.y + 1.0) / 2.0 * image_dim),
            static_cast<float>( (v.z + 1.0) / 2.0 * image_dim), 1.0f);
 
+        // Augmenting cuts down the input image a bit so we must adjust 
+        // ROI accordingly
         float roi_shift = ( image_dim - final_dim ) / 2.0f;
   
         tg.x = tg.x - roi_shift;
@@ -179,6 +181,8 @@ void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &r
         tg.z = tg.z - roi_shift;
 
         rgraph.push_back(tg);
+
+        // Note we don't undo Zscale, as augimage above does not flatten the Z back down either.
     }
 
 }

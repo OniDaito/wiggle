@@ -48,7 +48,7 @@ typedef struct {
     int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
     int final_width = 128;            // The input dimensions of each slice
     int final_height = 128;
-    size_t roi_xy = 128;           // Square across this dimension
+    size_t roi_xy = 200;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
     float depth_scale = 6.2;    // Ratio of Z/Depth to XY
@@ -251,10 +251,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
 
-    float rw = static_cast<float>(options.final_width) / static_cast<float>(roi.xy_dim);
-    float rh = static_cast<float>(options.final_height) / static_cast<float>(roi.xy_dim);
-    float rd = static_cast<float>(options.final_depth) / static_cast<float>(roi.depth);
-
     std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << ", " << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
@@ -277,11 +273,16 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             return false;
         }
 
-        p.x = (p.x - roi.x) * rw;
-        p.y = (p.y - roi.y) * rh;
-        p.z = (p.z - roi.z) * rd;
+        p.x = (p.x - roi.x);
+        p.y = (p.y - roi.y);
+        p.z = (p.z - roi.z);
         graph.push_back(p);
     }
+
+
+    float rw = static_cast<float>(options.final_width) / static_cast<float>(options.roi_xy);
+    float rh = static_cast<float>(options.final_height) / static_cast<float>(options.roi_xy);
+    float rd = static_cast<float>(options.final_depth) / static_cast<float>(options.roi_xy);
 
     // Generate a set of rotations
     ROTS.clear();
@@ -290,8 +291,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     
     for (int i = 1; i < options.num_augs; i++) {
         ROTS.push_back(RandRot());
-        glm::quat r = glm::angleAxis(glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-        ROTS.push_back(r);
     }
 
     for (int i = 0; i < options.num_augs; i++){
@@ -301,10 +300,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
         ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
+
+        std::vector<glm::vec4> tgraph;
+        // Not sure why the inverse. GLM versus our sampling I suppose
+        AugmentGraph(graph, tgraph,  glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
+        
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
+        FlipVerticalI(resized);
 
         if (options.flatten){
-            FlipVerticalI(resized);
             SaveFITS(output_path, resized);
         } else {
             ImageU8L3D resized3d = Resize(prefinal, options.final_width, options.final_height, options.final_depth);
@@ -315,18 +319,11 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
         std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.jpg";
         SaveJPG(output_path_jpg, jpeged);
-
-        std::vector<glm::vec4> tgraph;
-        AugmentGraph(graph, tgraph, glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
-
-        // Graph will also have been augmented so save that too
-        glm::mat4 rotmat = glm::toMat4(ROTS[i]);
-
     
         for (int j = 0; j < 4; j++){
             glm::vec4 av = tgraph[j];
             std::string x = libcee::ToString(av.x * rw);
-            std::string y = libcee::ToString(av.y * rh);
+            std::string y = libcee::ToString((static_cast<float>(options.roi_xy) - av.y) * rh);
             std::string z = libcee::ToString(av.z * rd);
             csv_line += x + ", " + y + ", " + z + ", "; 
         }
@@ -411,7 +408,7 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
-    std::cout << "Output Size Width: " << options.width << ", Height: " << options.height << ", Depth: " << options.depth << std::endl;
+    std::cout << "Input Size Width: " << options.width << ", Height: " << options.height << ", Depth: " << options.depth << std::endl;
 
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
