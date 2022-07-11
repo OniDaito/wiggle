@@ -59,7 +59,7 @@ TEST_CASE("Testing ROI crop") {
 
     glm::quat quat = RandRot();
 
-    ImageF32L3D augmented = Augment(contrasted, quat, roi_size, zratio);
+    ImageF32L3D augmented = Augment(contrasted, quat, roi_size, zratio, true);
     ImageF32L3D normalised = Normalise(augmented);
 
     MinMax(normalised, fmin, fmax);
@@ -94,7 +94,7 @@ TEST_CASE("Testing ROI crop") {
         qrot = glm::rotate(qrot, angle, glm::vec3(0.0,1.0,0.0));
         qrot = glm::rotate(qrot, angle, glm::vec3(1.0,0.0,0.0));
 
-        ImageF32L3D augmented = Augment(contrasted, qrot, roi_size, zratio);
+        ImageF32L3D augmented = Augment(contrasted, qrot, roi_size, zratio, true);
         ImageF32L3D normalised = Normalise(augmented);
         ImageF32L summed = Project(normalised, ProjectionType::SUM);
         ImageU8L converted = Convert<ImageU8L>(summed);

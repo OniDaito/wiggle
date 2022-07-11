@@ -152,7 +152,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             glm::quat q = ROTS[i];
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
-            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale);
+            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true);
             if (options.flatten) {
                 ImageF32L summed = Project(rotated, ProjectionType::SUM);
                 ImageF32L normalised = Normalise(summed);
@@ -270,7 +270,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         futures.push_back(pool.execute( [i, output_path, options, image_id, cropped] () {  
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_mask.fits";
-            ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
+            ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale, false);
             if (options.flatten) {
                 ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
                 ImageU8L resized = Resize(mipped, options.final_width, options.final_height);

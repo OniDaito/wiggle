@@ -15,16 +15,18 @@ import csv
 import numpy as np
 import argparse
 import os
+import scipy
 from astropy.io import fits
 from scipy.cluster.vq import kmeans
 from vedo import Points, show, Volume
+from holly.plyobj import save_obj
 
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description="Wiggle Three Check")
 
     parser.add_argument(
-        "--image", default="./test.obj", help="The path to the image we are checking."
+        "--image", default="./test.fits", help="The path to the image we are checking."
     )
     parser.add_argument(
         "--log", default="./log.csv", help="The path to the csv data log file."
@@ -88,9 +90,43 @@ if __name__ == "__main__":
     
     with fits.open(args.image) as w:
         #hdul = w[0].data.astype('float32')
-        hdul = w[0].data.byteswap().newbyteorder().astype('float32')
-        target = np.array(hdul, dtype=np.float32)
+        hdul = w[0].data.byteswap().newbyteorder().astype('int32')
+        target = np.array(hdul, dtype=np.int32)
         target_vol = target * 255
+
+        # get the 4 different masks
+        target_unique = np.unique(target, return_index=False, return_inverse=False, return_counts=False, axis=None)
+        volumes = []
+        neuron_points = []
+
+        print("Uniques", target_unique)
+
+        for idu in target_unique:
+            # ignore the 0 first one
+            if idu != 0:
+                tvol = np.where(target == idu, 1, 0)
+                volumes.append(tvol)
+                indices = np.where(target == idu) 
+                coordinates = np.array(list(zip(indices[2], indices[1], (indices[0] / args.depth) * args.width)))
+                neuron_points.append(coordinates)
+
+        # OBJ points
+        obj_points = np.vstack(neuron_points)
+        obj_points = (obj_points / args.width) * 2.0 - 1.0
+        save_obj("worm.obj", obj_points)
+        
+
+        # Now find the hulls
+        hulls = []
+
+        for npoints in neuron_points:
+            hull = scipy.spatial.ConvexHull(npoints)
+            fhull = []
+
+            for vidx in hull.vertices:
+                fhull.append(npoints[vidx])
+
+            hulls.append(np.array(fhull))
 
         # Interpolate the depths
         # https://stackoverflow.com/questions/28934767/best-way-to-interpolate-a-numpy-ndarray-along-an-axis
@@ -101,7 +137,6 @@ if __name__ == "__main__":
         target_vol = f_out(new_depths)
         target_vol = target_vol.astype(np.uint8)
 
-    
         for i in range(len(points)):
             #points[i][0] = points[i][0]
             #points[i][1] = points[i][1]
@@ -109,4 +144,9 @@ if __name__ == "__main__":
 
         vedo_vol = Volume(target_vol, alpha=0.4, mode=1)
         vedo_points = Points(points, r=12).c('red')
-        show(vedo_vol, vedo_points, __doc__, axes=1, viewup='y').close()
+
+        # First two hulls
+        hull_0 = Points(neuron_points[0], r=6).c('green')
+        hull_1 = Points(neuron_points[1], r=6).c('green')
+
+        show(vedo_vol, vedo_points, hull_0, hull_1,  __doc__, axes=1, viewup='y').close()    

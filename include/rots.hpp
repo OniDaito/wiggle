@@ -59,7 +59,7 @@
 
 
 template<typename T>
-T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
+T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool subpixel) {
     assert(image.width == image.height);
     assert(cube_dim < image.width);
     assert(cube_dim / zscale < image.depth);
@@ -100,47 +100,58 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale) {
                 v = rotmat * v;
 
                 // Now perform subpixel sampling
+              
                 float ffx = floor(v.x);
                 float ffy = floor(v.y);
                 float ffz = floor(v.z);
 
-                float gx = v.x - ffx;
-                float gy = v.y - ffy;
-                float gz = v.z - ffz;
+                if (subpixel) {
+                    float gx = v.x - ffx;
+                    float gy = v.y - ffy;
+                    float gz = v.z - ffz;
 
-                int cx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
-                int cy = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
-                int cz = static_cast <int>((v.z + 1.0) / 2.0 * resampled.depth);
+                    int cx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
+                    int cy = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
+                    int cz = static_cast <int>((v.z + 1.0) / 2.0 * resampled.depth);
 
-                // 27 samples so get values for all - left to right, top to bottom, front to back
-                float val = 0;
+                    // 27 samples so get values for all - left to right, top to bottom, front to back
+                    float val = 0;
 
-                for (int dz = -1; dz < 2; dz++) {
-                    for (int dy = -1; dy < 2; dy++) {
-                        for (int dx = -1; dx < 2; dx++) {
-                            
-                            int rx = cx + dx;
-                            int ry = cy + dy;
-                            int rz = cz + dz;
+                    for (int dz = -1; dz < 2; dz++) {
+                        for (int dy = -1; dy < 2; dy++) {
+                            for (int dx = -1; dx < 2; dx++) {
+                                
+                                int rx = cx + dx;
+                                int ry = cy + dy;
+                                int rz = cz + dz;
 
-                            float ddx = 0.5 + static_cast<float>(dx) - gx;
-                            float ddy = 0.5 + static_cast<float>(dy) - gy;
-                            float ddz = 0.5 + static_cast<float>(dz) - gz;
-                            
-                            float dist = sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                                float ddx = 0.5 + static_cast<float>(dx) - gx;
+                                float ddy = 0.5 + static_cast<float>(dy) - gy;
+                                float ddz = 0.5 + static_cast<float>(dz) - gz;
+                                
+                                float dist = sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
 
-                            if (dist < 1.0) {
-                                if (rx >= 0 && rx < resampled.width &&
-                                ry >= 0 && ry < resampled.height &&
-                                rz >= 0 && rz < resampled.depth) {
-                                    val += static_cast<float>(resampled.data[rz][ry][rx]) * (1.0 - dist);
+                                if (dist < 1.0) {
+                                    if (rx >= 0 && rx < resampled.width &&
+                                    ry >= 0 && ry < resampled.height &&
+                                    rz >= 0 && rz < resampled.depth) {
+                                        val += static_cast<float>(resampled.data[rz][ry][rx]) * (1.0 - dist);
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                augmented.data[z][y][x] = val;
+                    augmented.data[z][y][x] = val;
+                } else {
+                    int cx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
+                    int cy = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
+                    int cz = static_cast <int>((v.z + 1.0) / 2.0 * resampled.depth);
+                    if (cx >= 0 && cy >= 0 && cz >= 0 
+                        && cx < resampled.width && cy < resampled.height && cz < resampled.depth ) {
+                        augmented.data[z][y][x] = resampled.data[cz][cy][cx];
+                    }
+                }
             }
         }
     }

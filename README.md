@@ -62,3 +62,23 @@ For multiset
     -h New height to resize
     -z New depth to resize
     -b use the bottom instead of the top channel
+
+
+## check.py and stats.py
+
+An example of running check on an image on the dataset and the log.csv file in the dataset:
+
+    python check.py --image /media/proto_backup/wormz/queelim/dataset_aug11/01000_00_layered.fits --sigma 1.0 --log /media/proto_backup/wormz/queelim/dataset_aug11/log.csv
+
+Running stats on the dataset:
+
+    python stats.py --base /media/proto_backup/wormz/queelim
+
+
+## CSV File format
+
+The main program graph outputs a CSV log file of all the relevant information from the worm analysis in the following format:
+
+    id,p0x,p0y,p0z,p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z,fluor0,back0,mode0,minfluor0,size0,fluor1,back1,mode1,minfluor1,size1,fluor2,back2,mode2,minfluor2,size2, fluor3,back3,mode3,minfluor3,size3,orig
+
+In order, they correspond to the id, the xyz postion of ASI-1, ASI-2, ASJ-1 and ASJ-2 respectively, the 

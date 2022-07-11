@@ -144,7 +144,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
             glm::quat q = ROTS[i];
-            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale); 
+            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true); 
             if (options.flatten) {
                 ImageF32L summed = Project(rotated, ProjectionType::SUM);
                 ImageF32L normalised = Normalise(summed);
@@ -229,7 +229,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     out_stream.open(options.output_log_path, std::ios::app); 
 
     if (write_csv_header) {
-        out_stream << "id,p0x,p0y,p0z,p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z" << std::endl;
+        out_stream << "id,p0x,p0y,p0z,fluor0,back0,mode0,minfluor0,size0,p1x,p1y,p1z,fluor1,back1,mode1,minfluor1,size1,p2x,p2y,p2z,fluor2,back2,mode2,minfluor2,size2,p3x,p3y,p3z,fluor3,back3,mode3,minfluor3,size3,orig" << std::endl;
     }
 
 
@@ -260,14 +260,25 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
     // Should be ASI-1, ASI-2, ASJ-1, ASJ-2
     std::vector<glm::vec4> graph;
+    std::vector<std::string> extra_data;
 
+    // Get the required data from the .dat files in the annotation
     for (std::string line : lines) {
         std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
         std::string x = libcee::RemoveChar(libcee::RemoveChar(tokens[4], ','), ' ');
         std::string y = libcee::RemoveChar(libcee::RemoveChar(libcee::RemoveChar(tokens[3], ','), ' '), '[');
         std::string z = libcee::RemoveChar(libcee::RemoveChar(libcee::RemoveChar(tokens[5], ','), ' '), ']');
         glm::vec4 p = glm::vec4(libcee::FromString<float>(x), libcee::FromString<float>(y), libcee::FromString<float>(z), 1.0f);
-        
+    
+        std::string fl = libcee::RemoveChar(libcee::RemoveChar(tokens[1], ','), ' ');
+        std::string mode_fl = libcee::RemoveChar(libcee::RemoveChar(tokens[6], ','), ' ');
+        std::string min_fl = libcee::RemoveChar(libcee::RemoveChar(tokens[7], ','), ' ');
+        std::string bg = libcee::RemoveChar(libcee::RemoveChar(tokens[2], ','), ' ');
+        std::string rsize = libcee::RemoveChar(libcee::RemoveChar(tokens[8], ','), ' ');
+
+        std::string extra = fl + "," + bg + "," + mode_fl + "," + min_fl + "," + rsize;
+        extra_data.push_back(extra);
+
         // Must have all 4 neurons for now
         if (p.x == 0 && p.y == 0 && p.z == 0) {
             return false;
@@ -298,7 +309,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
         std::string csv_line =  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + ", ";
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
-        ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale);
+        ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale, false);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
 
         std::vector<glm::vec4> tgraph;
@@ -315,21 +326,22 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             FlipVerticalI(resized3d);
             SaveFITS(output_path, resized3d);
         }
-     
+
+        // Write a JPG just in case
         ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
         std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.jpg";
         SaveJPG(output_path_jpg, jpeged);
     
+        // Write out to the CSV file
         for (int j = 0; j < 4; j++){
             glm::vec4 av = tgraph[j];
             std::string x = libcee::ToString(av.x * rw);
             std::string y = libcee::ToString((static_cast<float>(options.roi_xy) - av.y) * rh);
             std::string z = libcee::ToString(av.z * rd);
-            csv_line += x + ", " + y + ", " + z + ", "; 
+            csv_line += x + "," + y + "," + z + "," + extra_data[j] + ",";
         }
 
-        csv_line = libcee::rtrim(csv_line);
-        csv_line = libcee::rtrim(csv_line);
+        csv_line += tiff_path;
         out_stream << csv_line << std::endl;
     }
 
