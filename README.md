@@ -77,8 +77,32 @@ Running stats on the dataset:
 
 ## CSV File format
 
-The main program graph outputs a CSV log file of all the relevant information from the worm analysis in the following format:
+The main program graph outputs a CSV log file of all the relevant information from the worm analysis. The format, in order, is as follows:
 
-    id,p0x,p0y,p0z,p1x,p1y,p1z,p2x,p2y,p2z,p3x,p3y,p3z,fluor0,back0,mode0,minfluor0,size0,fluor1,back1,mode1,minfluor1,size1,fluor2,back2,mode2,minfluor2,size2, fluor3,back3,mode3,minfluor3,size3,orig
+    id
+    X,Y,Z position of the first neuron (ASI-1) in pixels
+    the sum fluorescence count of this neuron
+    the background count
+    the mode of the flourescence
+    the minimum fluorescence we count as part of the neuron
+    the size of this neuron
+    X,Y,Z position of the second neuron (ASI-2) in pixels
+    the sum fluorescence count of this neuron
+    the background count
+    the mode of the flourescence
+    the minimum fluorescence we count as part of the neuron
+    the size of this neuron
+    X,Y,Z position of the third neuron (ASJ-1) in pixels
+    the sum fluorescence count of this neuron
+    the background count
+    the mode of the flourescence
+    the minimum fluorescence we count as part of the neuron
+    the size of this neuron
+    X,Y,Z position of the fourth neuron (ASJ-2) in pixels
+    the sum fluorescence count of this neuron
+    the background count
+    the mode of the flourescence
+    the minimum fluorescence we count as part of the neuron
+    the size of this neuron
+    the original mask file from the dataset used to derive this entry.
 
-In order, they correspond to the id, the xyz postion of ASI-1, ASI-2, ASJ-1 and ASJ-2 respectively, the 
