@@ -99,6 +99,7 @@ if __name__ == "__main__":
         volumes = []
         neuron_points = []
 
+        # TODO - all the uniques and objs only really works with the mask.fits
         print("Uniques", target_unique)
 
         for idu in target_unique:
@@ -114,7 +115,10 @@ if __name__ == "__main__":
         obj_points = np.vstack(neuron_points)
         obj_points = (obj_points / args.width) * 2.0 - 1.0
         save_obj("worm.obj", obj_points)
-        
+
+        for i, obj_points in enumerate(neuron_points):
+            obj_points = (obj_points / args.width) * 2.0 - 1.0
+            save_obj("worm " + str(i) + ".obj", obj_points)
 
         # Now find the hulls
         hulls = []

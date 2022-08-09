@@ -18,6 +18,7 @@ compiler = meson.get_compiler('cpp')
 imagine = dependency('imagine')
 libcee = dependency('cee')
 glfw = dependency('glfw3')
+postgres = dependency('libpqxx')
 
 # The include directories for the dependencies inside this project
 include_dirs = [
@@ -71,6 +72,15 @@ executable('three',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
+# db
+executable('db',
+          'src/db.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, postgres],
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 

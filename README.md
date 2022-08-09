@@ -105,4 +105,3 @@ The main program graph outputs a CSV log file of all the relevant information fr
     the minimum fluorescence we count as part of the neuron
     the size of this neuron
     the original mask file from the dataset used to derive this entry.
-
