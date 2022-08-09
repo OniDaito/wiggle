@@ -159,7 +159,7 @@ int main (int argc, char ** argv) {
 
             // Create the table for our worm stats
             char * sql = "CREATE TABLE IF NOT EXISTS wormz("  \
-                "id INT SERIAL PRIMARY KEY  NOT NULL," \
+                "id INT PRIMARY KEY  NOT NULL," \
                 "tifffile     TEXT    NOT NULL," \
                 "logfile      TEXT    NOT NULL," \
                 "datfile     TEXT    NOT NULL," \
