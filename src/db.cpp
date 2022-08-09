@@ -92,7 +92,8 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             // Create SQL statement
             std::string sql_string = "INSERT INTO wormz (tifffile, logfile, datfile, x, y, z, fl, mode_fl, bg, rsize, type) VALUES (";
             std::string D = ", ";
-            sql_string += tiff_path + D + log_path + D + coord_path + D + x + D + y + D + z + D + fl + D + mode_fl + D + bg + D + rsize + D + type;
+            std::string Q = "\"";
+            sql_string += Q + tiff_path + Q + D + Q + log_path + Q + D + Q + coord_path + Q + D + x + D + y + D + z + D + fl + D + mode_fl + D + bg + D + rsize + D + type;
             sql_string += ")";
             // Create a transactional object
             work W(C);
@@ -247,7 +248,7 @@ int main (int argc, char ** argv) {
         }
 
         if (!paired){
-            std::cout << "Failed to pair " << tiff_anno << std::endl;
+            std::cout << "Failed to pair or insert" << tiff_anno << std::endl;
         }
     }
     // Version 7 of the library (on Proto) doesnt have this
