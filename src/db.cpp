@@ -152,16 +152,16 @@ int main (int argc, char ** argv) {
     try {
         if (C.is_open()) {
             std::cout << "Opened database successfully: " << C.dbname() << std::endl;
-            char * sql = "drop table wormz if exists;";
+            // char * sql = "drop table wormz if exists;";
 
             // Create a transactional object
             work W(C);
             // Execute SQL query
-            W.exec( sql );
-            W.commit();
+            //W.exec( sql );
+            //W.commit();
 
             // Create the table for our worm stats
-            sql = "CREATE TABLE wormz("  \
+            char * sql = "CREATE TABLE IF NOT EXISTS wormz("  \
                 "id INT SERIAL PRIMARY KEY  NOT NULL," \
                 "tifffile     TEXT    NOT NULL," \
                 "logfile      TEXT    NOT NULL," \
