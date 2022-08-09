@@ -250,8 +250,8 @@ int main (int argc, char ** argv) {
             std::cout << "Failed to pair " << tiff_anno << std::endl;
         }
     }
-
-    C.disconnect ();
+    // Version 7 of the library (on Proto) doesnt have this
+    // C.disconnect ();
 
     return EXIT_SUCCESS;
 
