@@ -235,7 +235,7 @@ int main (int argc, char ** argv) {
                                 try {
                                     std::cout << "Masking: " << dat << std::endl;
                                     ProcessMask(options, tiff_anno, log, dat, image_idx, C);
-
+                                    paired = true;
                     
                                 } catch (const std::exception &e) {
                                     std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;
