@@ -90,10 +90,10 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
         try {
             // Create SQL statement
-            std::string sql_string = "INSERT INTO wormz (tifffile, logfile, datfile, x, y, z, fl, mode_fl, bg, rsize, type) VALUES (";
+            std::string sql_string = "INSERT INTO wormz (tifffile, logfile, datfile, x, y, z, fl, mode_fl, min_fl, bg, rsize, type) VALUES (";
             std::string D = ", ";
             std::string Q = "'";
-            sql_string += Q + tiff_path + Q + D + Q + log_path + Q + D + Q + coord_path + Q + D + x + D + y + D + z + D + fl + D + mode_fl + D + bg + D + rsize + D + type;
+            sql_string += Q + tiff_path + Q + D + Q + log_path + Q + D + Q + coord_path + Q + D + x + D + y + D + z + D + fl + D + mode_fl + D + min_fl + D + bg + D + rsize + D + type;
             sql_string += ")";
             // Create a transactional object
             work W(C);
