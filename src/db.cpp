@@ -130,7 +130,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:a:p:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:a:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -139,9 +139,6 @@ int main (int argc, char ** argv) {
                 break;
             case 'a' :
                 options.annotation_path = std::string(optarg);
-                break;
-            case 'p' :
-                options.prefix = std::string(optarg);
                 break;
         }
     }
