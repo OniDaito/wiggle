@@ -76,11 +76,10 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
 
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
+    converted = Sub(converted, noise, true);
 
     // Perform a subtraction on the images, removing background
     if (clean){ 
-        converted = Sub(converted, noise, true);
-
         // Contrast
         //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
         //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
@@ -376,7 +375,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbn:z:w:h:l:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -411,6 +410,9 @@ int main (int argc, char ** argv) {
             case 'n':
                 options.offset_number = libcee::FromString<int>(optarg);
                 image_idx = options.offset_number;
+                break;
+            case 'c':
+                options.cutoff = libcee::FromString<int>(optarg);
                 break;
             case 'z':
                 options.final_depth = libcee::FromString<int>(optarg);

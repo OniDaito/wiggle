@@ -4,7 +4,6 @@ touch dataset_2.log
 touch dataset_3.log
 touch dataset_4.log
 
-./release/graph -t -r -f -j 200 -w 200 -h 200 -q 1 -b -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL285_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0  -l /phd/wormz/queelim/dataset_2d_basic/log.csv -o /phd/wormz/queelim/dataset_2d_basic  >> dataset_1.log &
 ./release/graph -t -r -f -j 200 -w 200 -h 200 -q 1 -b -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL604_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL604_S1-d1.0 -l /phd/wormz/queelim/dataset_2d_basic/log.csv -o /phd/wormz/queelim/dataset_2d_basic -n 100 >> dataset_2.log &
 ./release/graph -t -r -f -j 200 -w 200 -h 200 -q 1 -b -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL922_S1-d1.0 -l /phd/wormz/queelim/dataset_2d_basic/log.csv -o /phd/wormz/queelim/dataset_2d_basic -n 200 >> dataset_3.log &
 ./release/graph -t -r -f -j 200 -w 200 -h 200 -q 1 -b -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL923_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL923_S1-d1.0 -l /phd/wormz/queelim/dataset_2d_basic/log.csv -o /phd/wormz/queelim/dataset_2d_basic -n 300 >> dataset_4.log
