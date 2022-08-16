@@ -407,13 +407,13 @@ int main (int argc, char ** argv) {
                 image_idx = options.offset_number;
                 break;
             case 'z':
-                options.depth = libcee::FromString<int>(optarg);
+                options.final_depth = libcee::FromString<int>(optarg);
                 break;
             case 'w':
-                options.width = libcee::FromString<int>(optarg);
+                options.final_width = libcee::FromString<int>(optarg);
                 break;
             case 'h':
-                options.height = libcee::FromString<int>(optarg);
+                options.final_height = libcee::FromString<int>(optarg);
                 break;
             case 's':
                 options.stacksize = libcee::FromString<int>(optarg);
