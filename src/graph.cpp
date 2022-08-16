@@ -160,7 +160,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
 
                 // Write a JPG just in case
                 ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
-                std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_id, 5) + "_" + aug_id + "_raw.jpg";
+                std::string output_path_jpg = options.output_path + "/" +  image_id + "_" + aug_id + "_raw.jpg";
                 SaveJPG(output_path_jpg, jpeged);
             } else {
                 // ImageF32L3D normalised = Normalise(rotated);
