@@ -151,14 +151,18 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true); 
             if (options.flatten) {
                 ImageF32L summed = Project(rotated, ProjectionType::SUM);
-                ImageF32L normalised = Normalise(summed);
-                FlipVerticalI(normalised);
-                ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
+                //ImageF32L normalised = Normalise(summed);
+                //FlipVerticalI(normalised);
+                //ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
+                FlipVerticalI(summed);
+                ImageF32L resized = Resize(summed, options.final_width, options.final_height);
                 SaveFITS(output_path, resized);
             } else {
-                ImageF32L3D normalised = Normalise(rotated);
-                FlipVerticalI(normalised);
-                ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
+                // ImageF32L3D normalised = Normalise(rotated);
+                //FlipVerticalI(normalised);
+                //ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
+                FlipVerticalI(rotated);
+                ImageF32L3D resized = Resize(rotated, options.final_width, options.final_height, options.final_depth);
                 SaveFITS(output_path, resized);
             }
             
