@@ -71,25 +71,28 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool clean) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
 
     // Perform a subtraction on the images, removing background
-    converted = Sub(converted, noise, true);
+    if (clean){ 
+        converted = Sub(converted, noise, true);
 
-    // Contrast
-    //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
-    //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
+        // Contrast
+        //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
+        //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
 
-    // Deconvolve with a known PSF
-    std::string path_kernel("./images/PSF3.tif");
-    ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-    ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
-    
-    return deconved;
+        // Deconvolve with a known PSF
+        std::string path_kernel("./images/PSF3.tif");
+        ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
+        ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
+        
+        return deconved;
+    }
+    return converted;
 }
 
 
@@ -132,14 +135,8 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed;
-    
-    if (options.clean) {
-        processed =  ProcessPipe(stacked, roi, options.cutoff);
-    } else {
-        processed = imagine::Convert<imagine::ImageF32L3D>(stacked);
-    }
- 
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.clean);
+  
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
     libcee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
