@@ -40,6 +40,7 @@ typedef struct {
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
+    bool clean = false;         // Do we deconvolve and all that?
     int channels = 2;           // 2 Channels initially in these images
     int depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
     int width = 640;            // The desired dimensions
@@ -131,8 +132,14 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff);
-
+    ImageF32L3D processed;
+    
+    if (options.clean) {
+        processed =  ProcessPipe(stacked, roi, options.cutoff);
+    } else {
+        processed = imagine::Convert<imagine::ImageF32L3D>(stacked);
+    }
+ 
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
     libcee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
@@ -363,7 +370,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtbn:z:w:h:l:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbn:z:w:h:l:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -388,6 +395,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'b':
                 options.bottom = true;
+                break;
+            case 'f':
+                options.flatten = true;
                 break;
             case 't' :
                 options.threeclass = true;
