@@ -157,6 +157,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 FlipVerticalI(summed);
                 ImageF32L resized = Resize(summed, options.final_width, options.final_height);
                 SaveFITS(output_path, resized);
+
+                // Write a JPG just in case
+                ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
+                std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_id, 5) + "_" + aug_id + "_raw.jpg";
+                SaveJPG(output_path_jpg, jpeged);
             } else {
                 // ImageF32L3D normalised = Normalise(rotated);
                 //FlipVerticalI(normalised);
