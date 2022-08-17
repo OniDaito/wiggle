@@ -150,9 +150,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true); 
             if (options.flatten) {
                 auto ptype = ProjectionType::MAX_INTENSITY;
+                
                 if (options.clean) {
                     ptype = ProjectionType::SUM;
                 }
+
                 ImageF32L summed = Project(rotated, ptype);
                 //ImageF32L normalised = Normalise(summed);
                 //FlipVerticalI(normalised);
