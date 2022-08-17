@@ -41,10 +41,8 @@ typedef struct {
     int offset_number = 0;
     bool bottom = false;
     bool clean = false;         // Do we deconvolve and all that?
+    bool max_intensity = false;    // If flattening, use max intensity
     int channels = 2;           // 2 Channels initially in these images
-    int depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
-    int width = 640;            // The desired dimensions
-    int height = 300;
     int stacksize = 51;         // How many stacks in our input 2D image
     int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
     int final_width = 128;            // The input dimensions of each slice
@@ -77,9 +75,9 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
     // Rather than a straight sub, do an if < noise, set to 0 instead.
-     std::function<float(float)> noise_func = [noise](float x) { if (x < noise) {return 0.0f;} return x; };
-    converted = ApplyFunc<ImageF32L3D, float>(converted, noise_func);
-    //converted = Sub(converted, noise, true);
+    //std::function<float(float)> noise_func = [noise](float x) { if (x < noise) {return 0.0f;} return x; };
+    //converted = ApplyFunc<ImageF32L3D, float>(converted, noise_func);
+    converted = Sub(converted, noise, true);
 
     // Perform a subtraction on the images, removing background
     if (deconv){ 
@@ -152,18 +150,19 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             glm::quat q = ROTS[i];
             ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true); 
             if (options.flatten) {
-                auto ptype = ProjectionType::MAX_INTENSITY;
+                auto ptype = ProjectionType::SUM;
                 
-                if (options.clean) {
-                    ptype = ProjectionType::SUM;
+                if (options.max_intensity) {
+                    ptype = ProjectionType::MAX_INTENSITY;
                 }
 
                 ImageF32L summed = Project(rotated, ptype);
-                //ImageF32L normalised = Normalise(summed);
-                //FlipVerticalI(normalised);
-                //ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
                 FlipVerticalI(summed);
-                // ImageF32L resized = Resize(summed, options.final_width, options.final_height);
+
+                if (options.final_width != summed.width || options.final_height != summed.height) {
+                    summed = Resize(summed, options.final_width, options.final_height);
+                }
+
                 SaveFITS(output_path, summed);
 
                 // Write a JPG just in case
@@ -384,7 +383,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbnm:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -412,6 +411,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'f':
                 options.flatten = true;
+                break;
+            case 'm':
+                options.max_intensity = true;
                 break;
             case 't' :
                 options.threeclass = true;
@@ -447,7 +449,6 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
-    std::cout << "Input Size Width: " << options.width << ", Height: " << options.height << ", Depth: " << options.depth << std::endl;
 
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
@@ -460,7 +461,6 @@ int main (int argc, char ** argv) {
 
     // Now find the input files
     std::cout << "Loading input images from " << options.image_path << std::endl;
-    std::cout << "Options: bottom: " << options.bottom << ", Stacksize:" << options.stacksize << std::endl;
 
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 
