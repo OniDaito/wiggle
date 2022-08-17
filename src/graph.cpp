@@ -230,7 +230,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     }
 
     // Join all our neurons
-    ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
+    ImageU8L3D neuron_mask(image_in.width, image_in.height / options.stacksize, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     // Set all neurons to 1 - we are only using the mask for the ROI
