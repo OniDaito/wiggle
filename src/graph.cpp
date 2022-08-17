@@ -71,7 +71,7 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool clean) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
@@ -82,7 +82,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
     //converted = Sub(converted, noise, true);
 
     // Perform a subtraction on the images, removing background
-    if (clean){ 
+    if (deconv){ 
         // Contrast
         //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
         //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
@@ -163,11 +163,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 //FlipVerticalI(normalised);
                 //ImageF32L resized = Resize(normalised, options.final_width, options.final_height);
                 FlipVerticalI(summed);
-                ImageF32L resized = Resize(summed, options.final_width, options.final_height);
-                SaveFITS(output_path, resized);
+                // ImageF32L resized = Resize(summed, options.final_width, options.final_height);
+                SaveFITS(output_path, summed);
 
                 // Write a JPG just in case
-                ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
+                ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(summed));
                 std::string output_path_jpg = options.output_path + "/" +  image_id + "_" + aug_id + "_raw.jpg";
                 SaveJPG(output_path_jpg, jpeged);
             } else {
