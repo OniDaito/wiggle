@@ -76,7 +76,10 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
 
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
-    converted = Sub(converted, noise, true);
+    // Rather than a straight sub, do an if < noise, set to 0 instead.
+     std::function<float(float)> noise_func = [noise](float x) { if (x < noise) {return 0.0f;} return x; };
+    converted = ApplyFunc<ImageF32L3D, float>(converted, noise_func);
+    //converted = Sub(converted, noise, true);
 
     // Perform a subtraction on the images, removing background
     if (clean){ 
