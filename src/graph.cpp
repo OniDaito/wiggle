@@ -40,7 +40,7 @@ typedef struct {
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
     bool bottom = false;
-    bool clean = false;         // Do we deconvolve and all that?
+    bool deconv = false;         // Do we deconvolve and all that?
     bool max_intensity = false;    // If flattening, use max intensity
     int channels = 2;           // 2 Channels initially in these images
     int stacksize = 51;         // How many stacks in our input 2D image
@@ -135,7 +135,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.clean);
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv);
   
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
@@ -383,7 +383,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfbmn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -408,6 +408,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'b':
                 options.bottom = true;
+                break;
+            case 'd':
+                options.deconv = true;
                 break;
             case 'f':
                 options.flatten = true;
