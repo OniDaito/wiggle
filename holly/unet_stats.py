@@ -9,18 +9,22 @@ Author : Benjamin Blundell - k1803390@kcl.ac.uk
 stats.py - look at the worm data and generate some stats
 
 Example use:
-python stats.py --base /media/proto_backup/wormz/queelim
+python unet_stats.py --base /media/proto_backup/wormz/queelim --dataset /media/proto_backup/wormz/queelim/dataset_24_09_2021 --savedir /media/proto_working/runs/wormz_2022_09_02
 
 """
 
 import torch
 import numpy as np
 import argparse
+import csv
 import os
 import torch.nn as nn
 from matplotlib import pyplot as plt
 from scipy.cluster.vq import kmeans
-from holly.math import PointsTen, gen_scale, gen_trans, Point, Points
+from util.loadsave_unet import load_model, load_checkpoint
+from util.math import PointsTen, gen_scale, gen_trans, Point, Points
+from util.image_unet import load_fits, save_image, resize_3d
+
 
 data_files = [ 
 ["/phd/wormz/queelim/ins-6-mCherry/20170724-QL285_S1-d1.0", "/phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL285_S1-d1.0"],
@@ -93,52 +97,68 @@ data_files = [
 ["/phd/wormz/queelim/ins-6-mCherry_2/20180308-QL849-d0.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180308-QL849-d0.0"]
 ]
 
-def reverse_graph(graph: Points, image_size):
-    ''' The graph from the imageload .csv file comes in 3D image co-ordinates so it needs to be altered to fit.
-    We are performing almost the reverse of the renderer.'''
-    # For now, stick with a cube of -1 to 1 on each dimension
-    assert(image_size[0] == image_size[1])
-    dim = image_size[0]
-    tgraph = PointsTen()
-    tgraph.from_points(graph)
-    scale = 2.0 / dim
-    scale_mat = gen_scale(torch.tensor([scale]), torch.tensor([scale]), torch.tensor([scale]))
-    trans_mat = gen_trans(torch.tensor([-1.0]), torch.tensor([-1.0]), torch.tensor([-1.0]))
-    tgraph.data = torch.matmul(scale_mat, tgraph.data)
-    tgraph.data = torch.matmul(trans_mat, tgraph.data)
-    ngraph = tgraph.get_points()
-    return ngraph
-
 
 if __name__ == "__main__":
     # Training settings
-    parser = argparse.ArgumentParser(description="Wiggle Data Analysis")
+    parser = argparse.ArgumentParser(description="U-Net Data Analysis")
 
-    parser.add_argument(
-        "--width",
-        type=int,
-        default=128,
-        help="The width of the input and output images \
-                          (default: 128).",
-    )
-    parser.add_argument(
-        "--height",
-        type=int,
-        default=128,
-        help="The height of the input and output images \
-                          (default: 128).",
-    )
-    parser.add_argument(
-        "--depth",
-        type=int,
-        default=16,
-        help="The depth of the input and output images \
-                          (default: 16).",
-    )
-    
+    parser.add_argument('--dataset', default="/phd/wormz/queelim/dataset_24_09_2021")
+    parser.add_argument('--savedir', default=".")
     parser.add_argument('--base', default="/phd/wormz/queelim")
+    parser.add_argument(
+        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
+    )
     args = parser.parse_args()
+
+    pairs = {}
+
+    if os.path.exists(args.dataset + "/dataset.log"):
+        with open(args.dataset + "/dataset.log") as f:
+            for line in f.readlines():
+                if "Renaming" in line and "_WS2" in line:
+                    tokens = line.split(" ")
+
+                    if len(tokens) == 4:
+                        original = tokens[1]
+                        idx = int(tokens[3].replace("\n",""))
+                        pairs[idx] = original
+                    else:
+                        # Probably spaces in the path
+                        original = (" ".join(tokens[1:-2])).replace("\n","")
+                        idx = int(tokens[-1].replace("\n",""))
+                        pairs[idx] = original
     
+    # Find the test set for a particular run
+    dataset=[]
+    final_files = []
+
+    if os.path.exists(args.savedir + "/dataset_test.csv"):
+        with open(args.savedir + "/dataset_test.csv") as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=',')
+            
+            for row in reader:
+                idx = int(row['source'].split("_")[0])
+                dataset.append(idx)
+                path = args.dataset + "/" + row['source']
+                final_files.append(path)
+
+    # Now look for the written down values in the data files
+    # Find the final filenames but remove the tiff
+    final_lookups = []
+
+    for idx in dataset:
+        path = pairs[idx]
+        head, tail = os.path.split(path)
+        head, pref = os.path.split(head)
+        _, pref2 = os.path.split(head)
+        final = pref2 + "/" + pref + "/" + tail
+        final = final.replace("tiff", "")
+        final = final.replace("_WS2","")
+        final_lookups.append((final, idx))
+
+    
+    test_set_files = []
+
     asi_1_total = []
     asi_2_total = []
     asj_1_total = []
@@ -149,75 +169,80 @@ if __name__ == "__main__":
 
         for dirname, dirnames, filenames in os.walk(tdir):
             for filename in filenames:
-                if ".dat" in filename and "dist" not in filename:
-                    with open(tdir + "/" + filename,'r') as f:
-                        lines = f.readlines()
-                        if len(lines) == 4:
-                            asi_1 = lines[0].replace("[", "").replace("]","").split(" ")
-                            asi_2 = lines[1].replace("[", "").replace("]","").split(" ")
-                            asj_1 = lines[2].replace("[", "").replace("]","").split(" ")
-                            asj_2 = lines[3].replace("[", "").replace("]","").split(" ")
 
-                            asi_1_total.append(float(asi_1[1]))
-                            asi_2_total.append(float(asi_2[1]))
-                            asj_1_total.append(float(asj_1[1]))
-                            asj_2_total.append(float(asj_2[1]))
+                if ".dat" in filename and "dist" not in filename: 
+                    tfile = tdir + "/" + filename
+                    head, tail = os.path.split(tfile)
+                    head, pref = os.path.split(head)
+                    _, pref2 = os.path.split(head)
+                    final = pref2 + "/" + pref + "/" + tail
+                    final = final.replace("dat", "")
+                    final = final.replace("_2","")
+                    
+                    for fname, fidx in final_lookups:
+                        
+                        if final == fname:
+                            test_set_files.append(pairs[fidx])
 
-                        else:
-                            print(tdir + "/" + filename, "num lines", len(lines))
+                            with open(tdir + "/" + filename,'r') as f:
+                                lines = f.readlines()
 
-    asi_1_total = np.array(asi_1_total)
-    asi_2_total = np.array(asi_2_total)
-    asj_1_total = np.array(asj_1_total)
-    asj_2_total = np.array(asj_2_total)
+                                if len(lines) == 4:
+                                    asi_1 = lines[0].replace("[", "").replace("]","").split(" ")
+                                    asi_2 = lines[1].replace("[", "").replace("]","").split(" ")
+                                    asj_1 = lines[2].replace("[", "").replace("]","").split(" ")
+                                    asj_2 = lines[3].replace("[", "").replace("]","").split(" ")
 
-    print ("Counts", len(asi_1_total),  len(asi_2_total), len(asj_1_total), len(asj_2_total))
+                                    asi_1_total.append(float(asi_1[1]))
+                                    asi_2_total.append(float(asi_2[1]))
+                                    asj_1_total.append(float(asj_1[1]))
+                                    asj_2_total.append(float(asj_2[1]))
 
-    asi_1_normed = (asi_1_total - np.min(asi_1_total)) / (np.max(asi_1_total) - np.min(asi_1_total))
-    asi_2_normed = (asi_2_total - np.min(asi_2_total)) / (np.max(asi_2_total) - np.min(asi_2_total))
-    asj_1_normed = (asj_1_total - np.min(asj_1_total)) / (np.max(asj_1_total) - np.min(asj_1_total))
-    asj_2_normed = (asj_2_total - np.min(asj_2_total)) / (np.max(asj_2_total) - np.min(asj_2_total))
+                                else:
+                                    print(tdir + "/" + filename, "num lines", len(lines))
+                            break
 
-    print("Mean Scores ASI-1, ASI-2, ASJ-1, ASJ-2", np.mean(asi_1_normed), np.mean(asi_2_normed), np.mean(asj_1_normed), np.mean(asj_2_normed))
-    print("Std Dev ASI-1, ASI-2, ASJ-1, ASJ-2", np.std(asi_1_normed), np.std(asi_2_normed), np.std(asj_1_normed), np.std(asj_2_normed))
+    # We should now have the neuron counts and the list of files in test_set_files
+    print ("Totals from input data set")
 
-    asi_1_hist = np.histogram(asi_1_normed)
-    asi_2_hist = np.histogram(asi_2_normed)
-    asj_1_hist = np.histogram(asj_1_normed)
-    asj_2_hist = np.histogram(asj_2_normed)
 
-    print(asi_1_hist)
+    # Now load the model to test it's predictions
+   
+    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
 
-    hists = [asi_1_normed, asi_2_normed, asj_1_normed, asj_2_normed]
-    labels = ["ASI-1", "ASI-2", "ASJ-1", "ASJ-2"]
+    if args.savedir and os.path.isfile(args.savedir + "/checkpoint.pth.tar"):
+        # (savedir, savename) = os.path.split(args.load)
+        # print(savedir, savename)
+        model = load_model(args.savedir + "/model.tar")
+        (model, _, _, _, _, prev_args) = load_checkpoint(
+            model, args.savedir, "checkpoint.pth.tar", device
+        )
+        model = model.to(device)
+        model.eval()
 
-    #plt.bar(asi_1_hist[1][:-1], asi_1_hist[0], width=0.1)
-    #plt.show()
+        for fidx, path in enumerate(final_files):
+            print("Testing", path)
+            input_image = load_fits(path, dtype=torch.float32)
+            resized_image = resize_3d(input_image, 0.5)
+            normalised_image = resized_image / 4095.0
 
-    #plt.hist(hists, 10, histtype='step', stacked=True, fill=False, label=labels)
+            final_image = torch.tensor(normalised_image)
 
-    ncols = 2
-    nrows = 2
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
-
-    ax = axes[0][0]
-    ax.hist(asi_1_normed, bins=100, alpha=0.5, label="ASI-1")
-    ax.set_xlabel('Normalised Luminance')
-    ax.set_ylabel('Count')
-    ax.legend(prop={'size': 10})
-    ax = axes[0][1]
-    ax.hist(asi_2_normed, bins=100, alpha=0.5, label="ASI-2")
-    ax.set_xlabel('Normalised Luminance')
-    ax.set_ylabel('Count')
-    ax.legend(prop={'size': 10})
-    ax = axes[1][0]
-    ax.hist(asj_1_normed, bins=100, alpha=0.5, label="ASJ-1")
-    ax.set_xlabel('Normalised Luminance')
-    ax.set_ylabel('Count')
-    ax.legend(prop={'size': 10})
-    ax = axes[1][1]
-    ax.hist(asj_2_normed, bins=100, alpha=0.5, label="ASJ-2")
-    ax.set_xlabel('Normalised Luminance')
-    ax.set_ylabel('Count')
-    ax.legend(prop={'size': 10})
-    plt.show()
+            with torch.no_grad():
+                im = input_image.unsqueeze(dim=0).unsqueeze(dim=0)
+                im = im.to(device)
+                prediction = model.forward(im)
+                #with open('prediction.npy', 'wb') as f:
+                #   np.save(f, prediction.detach().cpu().numpy())
+                
+                assert(not (torch.all(prediction == 0).item()))
+                classes = prediction.max(dim=1)[0].cpu()
+                #classes = torch.softmax(prediction, dim=1)[0]
+                assert(not (torch.all(classes == 0).item()))
+                final = classes.amax(axis=0)
+                coloured = final.amax(axis=0).cpu().numpy()
+                coloured = np.array(coloured / 4 * 255).astype(np.uint8)
+                save_image(coloured, name="guess" + str(fidx) + ".jpg")
+           
+   

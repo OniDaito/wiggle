@@ -2,3 +2,4 @@ build
 *.o
 *.tmp
 .vscode
+__pycache__
