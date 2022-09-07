@@ -227,10 +227,9 @@ if __name__ == "__main__":
             resized_image = resize_3d(input_image, 0.5)
             normalised_image = resized_image / 4095.0
 
-            final_image = torch.tensor(normalised_image)
 
             with torch.no_grad():
-                im = input_image.unsqueeze(dim=0).unsqueeze(dim=0)
+                im = normalised_image.unsqueeze(dim=0).unsqueeze(dim=0)
                 im = im.to(device)
                 prediction = model.forward(im)
                 #with open('prediction.npy', 'wb') as f:
