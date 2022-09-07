@@ -23,7 +23,7 @@ from matplotlib import pyplot as plt
 from scipy.cluster.vq import kmeans
 from util.loadsave_unet import load_model, load_checkpoint
 from util.math import PointsTen, gen_scale, gen_trans, Point, Points
-from util.image_unet import load_fits, save_image, resize_3d
+from util.image_unet import load_fits, reduce_result, save_image, resize_3d
 
 
 data_files = [ 
@@ -239,7 +239,8 @@ if __name__ == "__main__":
                 classes = prediction.max(dim=1)[0].cpu()
                 #classes = torch.softmax(prediction, dim=1)[0]
                 assert(not (torch.all(classes == 0).item()))
-                final = classes.amax(axis=0)
+                #final = classes.amax(axis=0)
+                final = reduce_result(prediction)
                 coloured = final.amax(axis=0).cpu().numpy()
                 coloured = np.array(coloured / 4 * 255).astype(np.uint8)
                 save_image(coloured, name="guess" + str(fidx) + ".jpg")
