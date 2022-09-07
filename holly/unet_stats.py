@@ -241,8 +241,9 @@ if __name__ == "__main__":
                 assert(not (torch.all(classes == 0).item()))
                 #final = classes.amax(axis=0)
                 final = reduce_result(prediction)
-                coloured = final.amax(axis=0).cpu().numpy()
-                coloured = np.array(coloured / 4 * 255).astype(np.uint8)
-                save_image(coloured, name="guess" + str(fidx) + ".jpg")
+                #coloured = final.amax(axis=0).cpu().numpy()
+                #coloured = np.array(coloured / 4 * 255).astype(np.uint8)
+                #save_image(coloured, name="guess" + str(fidx) + ".jpg")
+                save_image(final, name="guess" + str(fidx) + ".jpg")
            
    
