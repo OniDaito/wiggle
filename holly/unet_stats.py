@@ -271,18 +271,16 @@ def gen_counts(args, nclasses):
                 count_asj_2 = 0
               
                 print("Classes", resized_prediction.shape)
-                # Loop over the image and do the counts
-                for i in range(input_image.shape[0]):
-                     for j in range(input_image.shape[1]):
-                         for k in range(input_image.shape[2]):
-                            if resized_prediction[i][j][k] == 1:
-                                count_asi_1 += input_image[i][j][k]
-                            elif resized_prediction[i][j][k] == 2:
-                                count_asi_2 += input_image[i][j][k]
-                            elif resized_prediction[i][j][k] == 3:
-                                count_asj_1 += input_image[i][j][k]
-                            elif resized_prediction[i][j][k] == 4:
-                                count_asj_2 += input_image[i][j][k]
+
+                asi_1_mask = torch.where(resized_prediction == 1, 1, 0)
+                asi_2_mask = torch.where(resized_prediction == 2, 1, 0)
+                asj_1_mask = torch.where(resized_prediction == 3, 1, 0)
+                asj_2_mask = torch.where(resized_prediction == 4, 1, 0)
+
+                count_asi_1 = float(torch.sum(asi_1_mask * input_image))
+                count_asi_2 = float(torch.sum(asi_2_mask * input_image))
+                count_asj_1 = float(torch.sum(asj_1_mask * input_image))
+                count_asj_2 = float(torch.sum(asj_2_mask * input_image))
 
                 print("Counts", count_asi_1, count_asi_2, count_asj_1, count_asj_2)
 
