@@ -126,7 +126,7 @@ def resize_3d(image, zoom=1.0) -> torch.Tensor:
     torch.Tensor
     """
 
-    target = nd.interpolation.zoom(image.cpu().numpy(), zoom=0.5)
+    target = nd.interpolation.zoom(image.cpu().numpy(), zoom=zoom)
     return torch.tensor(target)
 
 
@@ -172,7 +172,7 @@ def reduce_mask(image, axis=0) -> np.ndarray:
     return np.array(final / 4 * 255).astype(np.uint8)
 
 
-def reduce_result(image, axis=0) -> np.ndarray:
+def reduce_result(image, axis=0, nclasses=5) -> np.ndarray:
     """
     Reduce the 3D image mask result batch to a 2D single image 
 
@@ -190,7 +190,7 @@ def reduce_result(image, axis=0) -> np.ndarray:
     """
     first = image[0].detach().cpu().squeeze()
     mid = first
-    mid = F.one_hot(mid.argmax(dim=0), 5).permute(3, 0, 1, 2)
+    mid = F.one_hot(mid.argmax(dim=0), nclasses).permute(3, 0, 1, 2)
     mid = np.argmax(mid, axis=0)* 255 / mid.shape[0]
     mid = mid.amax(dim = axis)
     return mid.numpy().astype(np.uint8)

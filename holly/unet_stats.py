@@ -13,17 +13,20 @@ python unet_stats.py --base /media/proto_backup/wormz/queelim --dataset /media/p
 
 """
 
+import pickle
 import torch
 import numpy as np
 import argparse
 import csv
 import os
+import sys
 import torch.nn as nn
 from matplotlib import pyplot as plt
 from scipy.cluster.vq import kmeans
 from util.loadsave_unet import load_model, load_checkpoint
 from util.math import PointsTen, gen_scale, gen_trans, Point, Points
 from util.image_unet import load_fits, reduce_result, save_image, resize_3d
+import torch.nn.functional as F
 
 
 data_files = [ 
@@ -57,27 +60,28 @@ data_files = [
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170818-QL867-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Hai_analysis/20170818-QL867-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170821-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170821-QL285-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170821-QL569-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170821-QL569-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170821-QL849-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170821-QL849-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170825-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170825-QL285-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170825-QL569-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170825-QL569-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170825-QL849-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170825-QL849-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170828-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170828-QL285-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170828-QL569-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170828-QL569-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20170828-QL849-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20170828-QL849-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170907-QL285-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170907-QL568-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170907-QL823-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170907-QL824-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170907-QL835-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170908-QL285-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170908-QL568-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170908-QL823-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170908-QL824-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170908-QL835-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170911-QL285-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170911-QL568-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170911-QL823-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170911-QL824-d1.0"],
-["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH\ ARZ\ analysis/20170911-QL835-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL285-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL568-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL823-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL824-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170907-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170907-QL835-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170908-QL285-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170908-QL568-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170908-QL823-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170908-QL824-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170908-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170908-QL835-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL285-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170911-QL285-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL568-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170911-QL568-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL823-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170911-QL823-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL824-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170911-QL824-d1.0"],
+["/phd/wormz/queelim/ins-6-mCherry_2/20170911-QL835-d1.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/LH ARZ analysis/20170911-QL835-d1.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20180126-QL285-d0.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180126-QL285-d0.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20180126-QL569-d0.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180126-QL569-d0.0"],
 ["/phd/wormz/queelim/ins-6-mCherry_2/20180126-QL849-d0.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180126-QL849-d0.0"],
@@ -97,19 +101,7 @@ data_files = [
 ["/phd/wormz/queelim/ins-6-mCherry_2/20180308-QL849-d0.0", "/phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180308-QL849-d0.0"]
 ]
 
-
-if __name__ == "__main__":
-    # Training settings
-    parser = argparse.ArgumentParser(description="U-Net Data Analysis")
-
-    parser.add_argument('--dataset', default="/phd/wormz/queelim/dataset_24_09_2021")
-    parser.add_argument('--savedir', default=".")
-    parser.add_argument('--base', default="/phd/wormz/queelim")
-    parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
-    )
-    args = parser.parse_args()
-
+def gen_counts(args, nclasses):
     pairs = {}
 
     if os.path.exists(args.dataset + "/dataset.log"):
@@ -129,8 +121,9 @@ if __name__ == "__main__":
                         pairs[idx] = original
     
     # Find the test set for a particular run
-    dataset=[]
-    final_files = []
+    dataset = []
+    final_sources = []
+    final_masks = []
 
     if os.path.exists(args.savedir + "/dataset_test.csv"):
         with open(args.savedir + "/dataset_test.csv") as csvfile:
@@ -140,11 +133,13 @@ if __name__ == "__main__":
                 idx = int(row['source'].split("_")[0])
                 dataset.append(idx)
                 path = args.dataset + "/" + row['source']
-                final_files.append(path)
+                final_sources.append(path)
+                path = args.dataset + "/" + row[' target'].replace(" ", "")
+                final_masks.append(path)
 
     # Now look for the written down values in the data files
     # Find the final filenames but remove the tiff
-    final_lookups = []
+    prefix_idx = []
 
     for idx in dataset:
         path = pairs[idx]
@@ -154,60 +149,80 @@ if __name__ == "__main__":
         final = pref2 + "/" + pref + "/" + tail
         final = final.replace("tiff", "")
         final = final.replace("_WS2","")
-        final_lookups.append((final, idx))
+        prefix_idx.append((final, idx))
 
-    
+    # We now have the input tiff file. We need to find it's corresponding annotation file.
+
     test_set_files = []
-
     asi_1_total = []
     asi_2_total = []
     asj_1_total = []
     asj_2_total = []
+    file_lookups = []
 
     for image_dir, data_dir in data_files:
         tdir = data_dir.replace("phd/wormz/queelim", args.base)
 
         for dirname, dirnames, filenames in os.walk(tdir):
+
             for filename in filenames:
 
-                if ".dat" in filename and "dist" not in filename: 
+                if ".dat" in filename and "_2" in filename and "ID" in filename: 
                     tfile = tdir + "/" + filename
                     head, tail = os.path.split(tfile)
                     head, pref = os.path.split(head)
                     _, pref2 = os.path.split(head)
-                    final = pref2 + "/" + pref + "/" + tail
-                    final = final.replace("dat", "")
-                    final = final.replace("_2","")
-                    
-                    for fname, fidx in final_lookups:
-                        
-                        if final == fname:
-                            test_set_files.append(pairs[fidx])
+                    ft = pref2 + "/" + pref + "/" + tail
+                    ft = ft.replace("dat", "")
+                    ft = ft.replace("_2","")
+                    file_lookups.append((ft, tfile))
 
-                            with open(tdir + "/" + filename,'r') as f:
-                                lines = f.readlines()
 
-                                if len(lines) == 4:
-                                    asi_1 = lines[0].replace("[", "").replace("]","").split(" ")
-                                    asi_2 = lines[1].replace("[", "").replace("]","").split(" ")
-                                    asj_1 = lines[2].replace("[", "").replace("]","").split(" ")
-                                    asj_2 = lines[3].replace("[", "").replace("]","").split(" ")
+    #print(file_lookups)
 
-                                    asi_1_total.append(float(asi_1[1]))
-                                    asi_2_total.append(float(asi_2[1]))
-                                    asj_1_total.append(float(asj_1[1]))
-                                    asj_2_total.append(float(asj_2[1]))
+    # Now match input tiff and id to the dat file
+    for fname, fidx in prefix_idx:
 
-                                else:
-                                    print(tdir + "/" + filename, "num lines", len(lines))
-                            break
+        search = [i for i in file_lookups if i[0] == fname]
+        print(search)
+
+        if len(search) != 0:
+            fpath = pairs[fidx]
+            test_set_files.append(fpath)
+
+            with open(search[0][1],'r') as f:
+                lines = f.readlines()
+
+                if len(lines) == 4:
+                    asi_1 = lines[0].replace("[", "").replace("]","").split(" ")
+                    asi_2 = lines[1].replace("[", "").replace("]","").split(" ")
+                    asj_1 = lines[2].replace("[", "").replace("]","").split(" ")
+                    asj_2 = lines[3].replace("[", "").replace("]","").split(" ")
+
+                    asi_1_total.append(float(asi_1[1]))
+                    asi_2_total.append(float(asi_2[1]))
+                    asj_1_total.append(float(asj_1[1]))
+                    asj_2_total.append(float(asj_2[1]))
+
+                else:
+                    print("Error in reading dat file.")
+                    print(tdir + "/" + filename, "num lines", len(lines))
+                    sys.exit(1)
+        
+        else:
+            print("Failed to find", fname)
+            sys.exit(1)
+
 
     # We should now have the neuron counts and the list of files in test_set_files
-    print ("Totals from input data set")
+    assert(len(dataset) == len(asi_1_total))
 
+    asi_1_total_pred = []
+    asi_2_total_pred = []
+    asj_1_total_pred = []
+    asj_2_total_pred = []
 
     # Now load the model to test it's predictions
-   
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -221,29 +236,167 @@ if __name__ == "__main__":
         model = model.to(device)
         model.eval()
 
-        for fidx, path in enumerate(final_files):
+        for fidx, path in enumerate(final_sources):
             print("Testing", path)
             input_image = load_fits(path, dtype=torch.float32)
             resized_image = resize_3d(input_image, 0.5)
             normalised_image = resized_image / 4095.0
 
-
             with torch.no_grad():
                 im = normalised_image.unsqueeze(dim=0).unsqueeze(dim=0)
                 im = im.to(device)
                 prediction = model.forward(im)
+
                 #with open('prediction.npy', 'wb') as f:
                 #   np.save(f, prediction.detach().cpu().numpy())
                 
                 assert(not (torch.all(prediction == 0).item()))
-                classes = prediction.max(dim=1)[0].cpu()
-                #classes = torch.softmax(prediction, dim=1)[0]
-                assert(not (torch.all(classes == 0).item()))
-                #final = classes.amax(axis=0)
+
+                classes = prediction[0].detach().cpu().squeeze()
+                classes = F.one_hot(classes.argmax(dim=0), nclasses).permute(3, 0, 1, 2)
+                classes = np.argmax(classes, axis=0)
+                
+                resized_prediction = classes.detach()
+                resized_prediction = resize_3d(resized_prediction, 2.0)
+                resized_prediction = torch.narrow(resized_prediction, 0, 0, input_image.shape[0])
+                print("Shapes", classes.shape, resized_prediction.shape, input_image.shape)
+                assert(resized_prediction.shape[2] == input_image.shape[2])
+     
                 final = reduce_result(prediction)
-                #coloured = final.amax(axis=0).cpu().numpy()
-                #coloured = np.array(coloured / 4 * 255).astype(np.uint8)
-                #save_image(coloured, name="guess" + str(fidx) + ".jpg")
                 save_image(final, name="guess" + str(fidx) + ".jpg")
            
-   
+                count_asi_1 = 0
+                count_asi_2 = 0
+                count_asj_1 = 0
+                count_asj_2 = 0
+              
+                print("Classes", resized_prediction.shape)
+                # Loop over the image and do the counts
+                for i in range(input_image.shape[0]):
+                     for j in range(input_image.shape[1]):
+                         for k in range(input_image.shape[2]):
+                            if resized_prediction[i][j][k] == 1:
+                                count_asi_1 += input_image[i][j][k]
+                            elif resized_prediction[i][j][k] == 2:
+                                count_asi_2 += input_image[i][j][k]
+                            elif resized_prediction[i][j][k] == 3:
+                                count_asj_1 += input_image[i][j][k]
+                            elif resized_prediction[i][j][k] == 4:
+                                count_asj_2 += input_image[i][j][k]
+
+                print("Counts", count_asi_1, count_asi_2, count_asj_1, count_asj_2)
+
+                asi_1_total_pred.append(count_asi_1)
+                asi_2_total_pred.append(count_asi_2)
+                asj_1_total_pred.append(count_asj_1)
+                asj_2_total_pred.append(count_asj_2)
+
+    data = {}
+    data["asi_1_actual"] = asi_1_total
+    data["asi_2_actual"] = asi_2_total
+    data["asj_1_actual"] = asj_1_total
+    data["asj_2_actual"] = asj_2_total
+    data["asi_1_pred"] = asi_1_total_pred
+    data["asi_2_pred"] = asi_2_total_pred
+    data["asj_1_pred"] = asj_1_total_pred
+    data["asj_2_pred"] = asj_2_total_pred
+    data["source_files"] = test_set_files
+    data["prediction_files"] = test_set_files
+
+    with open('data.pickle', 'wb') as f:
+        # Pickle the 'data' dictionary using the highest protocol available.
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    return data
+
+
+if __name__ == "__main__":
+    # Training settings
+    parser = argparse.ArgumentParser(description="U-Net Data Analysis")
+
+    parser.add_argument('--dataset', default="/phd/wormz/queelim/dataset_24_09_2021")
+    parser.add_argument('--savedir', default=".")
+    parser.add_argument('--base', default="/phd/wormz/queelim")
+    parser.add_argument(
+        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
+    )
+    parser.add_argument('--load', default="")
+    args = parser.parse_args()
+    nclasses = 5
+    data = None
+
+    if args.load != "" and os.path.exists(args.load):
+        with open('data.pickle', 'rb') as f:
+            # The protocol version used is detected automatically, so we do not
+            # have to specify it.
+            data = pickle.load(f)
+    else:
+       data = gen_counts(args, nclasses)
+
+    from scipy.stats import spearmanr, pearsonr
+
+    print (len(data["source_files"]), len(data["asi_1_pred"]))
+
+    # Convert any tensors we have into values
+    for i in range(len(data["asi_1_pred"])):
+        data["asi_1_pred"][i] = data["asi_1_pred"][i].item()
+        data["asi_2_pred"][i] = data["asi_2_pred"][i].item()
+        data["asj_1_pred"][i] = data["asj_1_pred"][i].item()
+        data["asj_2_pred"][i] = float(data["asj_2_pred"][i])
+
+    print("Correlations - spearmans & pearsons - ASI-1, ASI-2, ASJ-1, ASJ-2")
+
+    asi_1_cor = spearmanr(data["asi_1_actual"], data["asi_1_pred"])
+    asi_2_cor = spearmanr(data["asi_2_actual"], data["asi_2_pred"])
+    asj_1_cor = spearmanr(data["asj_1_actual"], data["asj_1_pred"])
+    asj_2_cor = spearmanr(data["asj_2_actual"], data["asj_2_pred"])
+    print(asi_1_cor, asi_2_cor, asj_1_cor, asj_2_cor)
+
+    asi_1_cor = pearsonr(data["asi_1_actual"], data["asi_1_pred"])
+    asi_2_cor = pearsonr(data["asi_2_actual"], data["asi_2_pred"])
+    asj_1_cor = pearsonr(data["asj_1_actual"], data["asj_1_pred"])
+    asj_2_cor = pearsonr(data["asj_2_actual"], data["asj_2_pred"])
+    print(asi_1_cor, asi_2_cor, asj_1_cor, asj_2_cor)
+
+
+    asi_combo_real =  [data['asi_1_actual'][i] + data['asi_2_actual'][i] for i in range(len(data['asi_1_actual']))]
+    asi_combo_pred =  [data['asi_1_pred'][i] + data['asi_2_pred'][i] for i in range(len(data['asi_1_pred']))]
+    asj_combo_real =  [data['asj_1_actual'][i] + data['asj_2_actual'][i] for i in range(len(data['asj_1_actual']))]
+    asj_combo_pred =  [data['asj_1_pred'][i] + data['asj_2_pred'][i] for i in range(len(data['asj_1_pred']))]
+
+    print("Correlations - spearmans & pearsons - ASI, ASJ")
+    asi_combo_cor = spearmanr(asi_combo_real, asi_combo_pred)
+    asj_combo_cor = spearmanr(asj_combo_real, asj_combo_pred)
+    print(asi_combo_cor, asj_combo_cor)
+
+    asi_combo_cor = pearsonr(asi_combo_real, asi_combo_pred)
+    asj_combo_cor = pearsonr(asj_combo_real, asj_combo_pred)
+    print(asi_combo_cor, asj_combo_cor)
+
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas as pd
+
+    sns.set_theme(style="darkgrid")
+    fig, axes = plt.subplots(2, 2)
+
+    individuals = list(range(len(data["asi_1_actual"])))
+    df0 = pd.DataFrame({"individual": individuals, "asi_1_actual": data["asi_1_actual"], "asi_1_pred": data["asi_1_pred"]})
+    df1 = pd.DataFrame({"individual": individuals, "asi_2_actual": data["asi_2_actual"], "asi_2_pred": data["asi_2_pred"]})
+    df2 = pd.DataFrame({"individual": individuals, "asj_1_actual": data["asj_1_actual"], "asj_1_pred": data["asj_1_pred"]})
+    df3 = pd.DataFrame({"individual": individuals, "asj_2_actual": data["asj_2_actual"], "asj_2_pred": data["asj_2_pred"]})
+
+    sns.lineplot(x="individual", y='value', hue='variable', 
+             data=pd.melt(df0, ['individual']), ax=axes[0][0])
+  
+    sns.lineplot(x="individual", y='value', hue='variable', 
+             data=pd.melt(df1, ['individual']), ax=axes[0][1])
+
+    sns.lineplot(x="individual", y='value', hue='variable', 
+             data=pd.melt(df2, ['individual']), ax=axes[1][0])
+  
+    sns.lineplot(x="individual", y='value', hue='variable', 
+             data=pd.melt(df3, ['individual']), ax=axes[1][1])
+    
+    plt.show()
