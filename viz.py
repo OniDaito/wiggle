@@ -28,7 +28,6 @@ if __name__ == "__main__":
         "--image", default="./test.fits", help="The path to the image we are checking."
     )
    
- 
     args = parser.parse_args()
     
     with fits.open(args.image) as w:
