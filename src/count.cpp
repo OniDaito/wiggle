@@ -205,7 +205,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:l:p:rtbn:z:w:h:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:l:p:rbn:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -225,9 +225,6 @@ int main (int argc, char ** argv) {
             case 'p' :
                 options.prefix = std::string(optarg);
                 break;
-            case 'r' :
-                options.rename = true;
-                break;
             case 'b':
                 options.bottom = true;
                 break;
@@ -237,22 +234,7 @@ int main (int argc, char ** argv) {
             case 'n':
                 options.offset_number = libcee::FromString<int>(optarg);
                 image_idx = options.offset_number;
-                break;
-            case 'z':
-                options.final_depth = libcee::FromString<int>(optarg);
-                break;
-            case 'w':
-                options.final_width = libcee::FromString<int>(optarg);
-                break;
-            case 'h':
-                options.final_height = libcee::FromString<int>(optarg);
-                break;
-            case 's':
-                options.stacksize = libcee::FromString<int>(optarg);
-                break;
-            case 'j':
-                options.roi_xy = libcee::FromString<int>(optarg);
-                break;
+       
         }
     }
 
