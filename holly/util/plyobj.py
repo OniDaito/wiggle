@@ -11,7 +11,7 @@ TODO - merge with util_points as there is a bit of
 overlap here and there.
 
 """
-from holly.math import Points, Point
+from util.math import Points, Point
 
 
 def save_ply(path, vertices):

@@ -75,6 +75,16 @@ executable('three',
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
+# three
+executable('count',
+          'src/count.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
+
 # db
 executable('db',
           'src/db.cpp',
