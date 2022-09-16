@@ -122,7 +122,7 @@ bool is_csv_empty(std::string path) {
 
 
 BaseCounts GetCSVCounts(std::string &coord_path) {
-    BaseCounts counts = {0, 0, 0, 0, 0};
+    BaseCounts counts = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // Now write out the graph co-ords
      // Read the dat file and write out the coordinates in order as an entry in a CSV file
@@ -132,8 +132,8 @@ BaseCounts GetCSVCounts(std::string &coord_path) {
     for (std::string line : lines) {
         std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
         std::string n = libcee::RemoveChar(libcee::RemoveChar(tokens[0], ','), ' ');
-        uint64_t c = libcee::FromString<uint64_t>(tokens[1]);
-        uint64_t m = libcee::FromString<uint64_t>(tokens[6]);
+        uint64_t c = libcee::FromString<int64_t>(tokens[1]);
+        uint64_t m = libcee::FromString<int64_t>(tokens[6]);
         if (n == "ASI-1") { counts.asi1 = c; counts.asi1_mode = m; }
         if (n == "ASI-2") { counts.asi2 = c; counts.asi2_mode = m; }
         if (n == "ASJ-1") { counts.asj1 = c; counts.asj1_mode = m; }
