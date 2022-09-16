@@ -189,22 +189,23 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
 
 Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCounts &base){
     Counts counts = {0, 0, 0, 0};
-    uint16_t noise = 270;
 
     for (uint32_t z = 0; z < raw.depth; z++) {
         for (uint32_t y = 0; y < raw.height; y++) {
             for (uint32_t x = 0; x < raw.width; x++) {
                 uint8_t m = mask.data[z][y][x];
+
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += static_cast<int64_t>(raw.data[z][y][x])- base.asi1_mode;
+                    counts.asi1 += static_cast<int64_t>(raw.data[z][y][x]) - base.asi1_mode;
                     break;
                 case 2:
                     counts.asi2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asi2_mode;
                     break;
                 case 3:
                     counts.asj1 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj1_mode;
+                    std::cout << static_cast<int64_t>(raw.data[z][y][x]) << std::endl;
                     break;
                 case 4:
                     counts.asj2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj2_mode;
