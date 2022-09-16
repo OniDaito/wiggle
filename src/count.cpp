@@ -273,7 +273,7 @@ int main (int argc, char ** argv) {
     out_stream.open(options.output_log_path, std::ios::app);
 
     if (write_csv_header) {
-        out_stream << "fileraw,filemask,asi1,asi2,asj1,asj2,basi1,basi2,basj1,basj2,dasi1,dasi2,dasj1,dasj2" << std::endl;
+        out_stream << "fileraw,filemask,asi1,asi2,asj1,asj2,basi1,basi2,basj1,basj2" << std::endl;
     }
 
     // Pair up the tiffs with their log file and then the input and process them.
@@ -314,8 +314,7 @@ int main (int argc, char ** argv) {
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
                                     Counts count = GetCount(raw_data, mask);
                                     out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << ","
-                                        << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 << ","
-                                        << count.asi1 - base_count.asi1 << "," << count.asi2 - base_count.asi2  << "," <<  count.asj1 - base_count.asj1  << "," << count.asj2 - base_count.asj2 << std::endl;
+                                        << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 << std::endl;
 
                                     break;
                                 } catch (const std::exception &e) {
