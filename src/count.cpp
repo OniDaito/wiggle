@@ -238,10 +238,10 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCount
     asj2.resize(4000, 0);
 
     for (size_t i = 0; i < 4000; i++) {
-        counts.asi1 += asi1[i] - base.asi1_mode;
-        counts.asi2 += asi2[i] - base.asi2_mode;
-        counts.asj1 += asj1[i] - base.asj1_mode;
-        counts.asj2 += asj2[i] - base.asj2_mode;
+        counts.asi1 += static_cast<int64_t>(asi1[i]) - base.asi1_mode;
+        counts.asi2 += static_cast<int64_t>(asi2[i]) - base.asi2_mode;
+        counts.asj1 += static_cast<int64_t>(asj1[i]) - base.asj1_mode;
+        counts.asj2 += static_cast<int64_t>(asj2[i]) - base.asj2_mode;
     }
 
     return counts;
