@@ -183,16 +183,16 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask){
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += raw.data[z][y][x];
+                    counts.asi1 += raw.data[z][y][x] - 260;
                     break;
                 case 2:
-                    counts.asi2 += raw.data[z][y][x];
+                    counts.asi2 += raw.data[z][y][x] - 260;
                     break;
                 case 3:
-                    counts.asj1 += raw.data[z][y][x];
+                    counts.asj1 += raw.data[z][y][x] - 260;
                     break;
                 case 4:
-                    counts.asj2 += raw.data[z][y][x];
+                    counts.asj2 += raw.data[z][y][x] - 260;
                     break;
                 default:
                     break;
