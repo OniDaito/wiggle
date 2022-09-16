@@ -165,17 +165,10 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
-    if (options.threeclass) {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
-    } else {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
-    }
+    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
 
     return neuron_mask;
 }
@@ -226,7 +219,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:l:p:btn:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:l:p:bt?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -249,12 +242,6 @@ int main (int argc, char ** argv) {
             case 'b':
                 options.bottom = true;
                 break;
-            case 't' :
-                options.threeclass = true;
-                break;
-            case 'n':
-                options.offset_number = libcee::FromString<int>(optarg);
-                image_idx = options.offset_number;
        
         }
     }
