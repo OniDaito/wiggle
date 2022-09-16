@@ -198,16 +198,16 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCount
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += raw.data[z][y][x] - base.asi1_mode;
+                    counts.asi1 += static_cast<int64_t>(raw.data[z][y][x])- base.asi1_mode;
                     break;
                 case 2:
-                    counts.asi2 += raw.data[z][y][x] - base.asi2_mode;
+                    counts.asi2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asi2_mode;
                     break;
                 case 3:
-                    counts.asj1 += raw.data[z][y][x] - base.asj1_mode;
+                    counts.asj1 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj1_mode;
                     break;
                 case 4:
-                    counts.asj2 += raw.data[z][y][x] - base.asj2_mode;
+                    counts.asj2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj2_mode;
                     break;
                 default:
                     break;
