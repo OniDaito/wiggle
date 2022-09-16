@@ -132,11 +132,12 @@ BaseCounts GetCSVCounts(std::string &coord_path) {
     for (std::string line : lines) {
         std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
         std::string n = libcee::RemoveChar(libcee::RemoveChar(tokens[0], ','), ' ');
-        long c = libcee::FromString<float>(tokens[1]);
-        if (n == "ASI-1") { counts.asi1 = c; }
-        if (n == "ASI-2") { counts.asi2 = c; }
-        if (n == "ASJ-1") { counts.asj1 = c; }
-        if (n == "ASJ-2") { counts.asj2 = c; }
+        long c = libcee::FromString<uint64_t>(tokens[1]);
+        long m = libcee::FromString<uint64_t>(tokens[6]);
+        if (n == "ASI-1") { counts.asi1 = c; counts.asi1_mode = m; }
+        if (n == "ASI-2") { counts.asi2 = c; counts.asi2_mode = m; }
+        if (n == "ASJ-1") { counts.asj1 = c; counts.asj1_mode = m; }
+        if (n == "ASJ-2") { counts.asj2 = c; counts.asj2_mode = m; }
     }
     return counts;
 }
