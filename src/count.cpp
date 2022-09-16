@@ -53,10 +53,10 @@ typedef struct {
 } Options;
 
 typedef struct {
-    long asi1;
-    long asi2;
-    long asj1;
-    long asj2;
+    unsigned long asi1;
+    unsigned long asi2;
+    unsigned long asj1;
+    unsigned long asj2;
 } Counts;
 
 using namespace imagine;
@@ -88,8 +88,8 @@ ImageU16L3D TiffToStack(Options &options, std::string &tiff_path) {
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
                 // val = std::max(val - options.cutoff, 0);
-                stacked.data[d][stacked.height - y - 1][x] = val;
-                //stacked.data[d][y][x] = val;
+                //stacked.data[d][stacked.height - y - 1][x] = val;
+                stacked.data[d][y][x] = val;
             }
         }
     }
@@ -183,16 +183,16 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask){
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += raw.data[z][y][x] - 260;
+                    counts.asi1 += raw.data[z][y][x];
                     break;
                 case 2:
-                    counts.asi2 += raw.data[z][y][x] - 260;
+                    counts.asi2 += raw.data[z][y][x];
                     break;
                 case 3:
-                    counts.asj1 += raw.data[z][y][x] - 260;
+                    counts.asj1 += raw.data[z][y][x];
                     break;
                 case 4:
-                    counts.asj2 += raw.data[z][y][x] - 260;
+                    counts.asj2 += raw.data[z][y][x];
                     break;
                 default:
                     break;
