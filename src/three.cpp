@@ -195,15 +195,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     if (options.threeclass) {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 1);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 2);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 2);
     } else {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
+        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 2);
+        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 3);
+        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 4);
     }
 
     if (!n1 || !n2 || !n3 || !n4) {

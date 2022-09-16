@@ -26,7 +26,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-bool SetNeuron(imagine::ImageU16L &image_in, imagine::ImageU8L3D &image_out, std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write);
+bool SetNeuron(imagine::ImageU16L &image_in, imagine::ImageU8L3D &image_out, std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, bool flip_height, int id_to_write);
 imagine::ImageU8L3D StackMask(imagine::ImageU16L &image_in, size_t width, size_t height, size_t stacksize);
 imagine::ImageU8L Flatten(imagine::ImageU8L3D &mask);
 bool non_zero(imagine::ImageU8L3D &image);

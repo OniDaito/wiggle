@@ -125,10 +125,10 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
-    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
+    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 2);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 3);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 4);
 
     if (!n1 && !n2 && !n3 && !n4) {
         std::cout << "Failed to find neurons in mask." << std::endl;

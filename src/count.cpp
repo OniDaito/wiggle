@@ -97,12 +97,9 @@ ImageU16L3D TiffToStack(Options &options, std::string &tiff_path) {
 
     for (uint32_t d = 0; d < stacked.depth; d++) {
         for (uint32_t y = 0; y < stacked.height; y++) {
-            // To get the FITS to match, we have to flip/mirror in the Y axis, unlike for PNG flatten.
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
-                // val = std::max(val - options.cutoff, 0);
-                stacked.data[d][stacked.height - y - 1][x] = val;
-                //stacked.data[d][y][x] = val;
+                stacked.data[d][y][x] = val;
             }
         }
     }
@@ -123,9 +120,6 @@ bool is_csv_empty(std::string path) {
 
 BaseCounts GetCSVCounts(std::string &coord_path) {
     BaseCounts counts = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    // Now write out the graph co-ords
-     // Read the dat file and write out the coordinates in order as an entry in a CSV file
     std::vector<std::string> lines = libcee::ReadFileLines(coord_path);
     if(lines.size() != 4) {  return counts; }
 
@@ -179,10 +173,10 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
-    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
+    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 2);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 3);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 4);
 
     return neuron_mask;
 }
@@ -190,38 +184,27 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
 Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCounts &base){
     Counts counts = {0, 0, 0, 0};
 
-    // Computed in the same way that neuroshed does
+    // We can computed in the same way that neuroshed does but for now, I'm using all the mask
     std::vector<uint16_t> asi1;
     std::vector<uint16_t> asi2;
     std::vector<uint16_t> asj1;
     std::vector<uint16_t> asj2;
 
-    for (uint32_t z = 0; z < raw.depth; z++) {
-        for (uint32_t y = 0; y < raw.height; y++) {
-            for (uint32_t x = 0; x < raw.width; x++) {
+    for (size_t z = 0; z < raw.depth; z++) {
+        for (size_t y = 0; y < raw.height; y++) {
+            for (size_t x = 0; x < raw.width; x++) {
                 uint8_t m = mask.data[z][y][x];
 
-                switch (m)
-                {
-                case 1:
-                    asi1.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
-                    break;
-                case 2:
-                    asi2.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
-                    break;
-                case 3:
-                    asj1.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
-                    break;
-                case 4:
-                    asj2.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
-                    break;
-                default:
-                    break;
-                }
+                if (m == 1) { asi1.push_back(static_cast<uint16_t>(raw.data[z][y][x])); }
+                else if (m == 2) { asi2.push_back(static_cast<uint16_t>(raw.data[z][y][x])); }
+                else if (m == 3) { asj1.push_back(static_cast<uint16_t>(raw.data[z][y][x])); }
+                else if (m == 4) { asj2.push_back(static_cast<uint16_t>(raw.data[z][y][x])); }
             }
         }
     }
 
+    // Uncomment the below to do the neuroshed count
+    /*
     std::sort(asi1.begin(), asi1.end());
     std::sort(asi2.begin(), asi2.end());
     std::sort(asj1.begin(), asj1.end());
@@ -229,7 +212,7 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCount
 
     std::reverse(asi1.begin(), asi1.end());
     std::reverse(asi2.begin(), asi2.end());
-    std::reverse(asj1.begin(), asi1.end());
+    std::reverse(asj1.begin(), asj1.end());
     std::reverse(asj2.begin(), asj2.end());
 
     asi1.resize(4000, 0);
@@ -242,8 +225,17 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCount
         counts.asi2 += static_cast<int64_t>(asi2[i]) - base.asi2_mode;
         counts.asj1 += static_cast<int64_t>(asj1[i]) - base.asj1_mode;
         counts.asj2 += static_cast<int64_t>(asj2[i]) - base.asj2_mode;
-    }
+    }*/
 
+    // And comment out the 6 lines below 
+  
+    for (size_t i = 0; i < asi1.size(); i++) { counts.asi1 += static_cast<int64_t>(asi1[i]); }
+    for (size_t i = 0; i < asi2.size(); i++) { counts.asi2 += static_cast<int64_t>(asi2[i]); }
+    for (size_t i = 0; i < asj1.size(); i++) { counts.asj1 += static_cast<int64_t>(asj1[i]); }
+    for (size_t i = 0; i < asj2.size(); i++) { counts.asj2 += static_cast<int64_t>(asj2[i]); }
+
+    // std::cout << "Hishest Scores " <<  asi1[0] << " " <<  asi2[0] << " " << asj1[0] << " " <<  asj2[0] << std::endl;
+    std::cout << "Counts " << counts.asi1 << " " << counts.asi2 << " "  << counts.asj1 << " "  << counts.asj2 << std::endl;
     return counts;
 }
 
@@ -353,12 +345,10 @@ int main (int argc, char ** argv) {
                                     std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
                                     ImageU8L3D mask = ProcessMask(options, tiff_anno, log);
                                     BaseCounts base_count = GetCSVCounts(dat);
-                                    std::cout << base_count.asi1_mode << " " <<  base_count.asi2_mode << " " <<  base_count.asj1_mode << " " << base_count.asj2_mode << std::endl;
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
                                     Counts count = GetCount(raw_data, mask, base_count);
                                     out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << ","
                                         << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 << std::endl;
-
                                     break;
                                 } catch (const std::exception &e) {
                                     std::cout << "An exception occured with" << tiff_anno << " and " <<  tiff_input << std::endl;

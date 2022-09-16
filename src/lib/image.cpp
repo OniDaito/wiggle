@@ -45,7 +45,7 @@ ImageU8L3D StackMask(ImageU16L &image_in, size_t width, size_t height, size_t st
  * Check the area id against the neuron list, setting it to what it claims to be.
  * Look at one channel only though, top or bottom
  */
-bool SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out, std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, int id_to_write) {
+bool SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out, std::vector<std::vector<size_t>> &neurons, int neuron_id, bool flip_depth, bool flip_height, int id_to_write) {
     bool neuron_set = false;
 
     for (uint32_t d = 0; d < image_out.depth; d++) {
@@ -62,12 +62,18 @@ bool SetNeuron(ImageU16L &image_in, ImageU8L3D &image_out, std::vector<std::vect
                         neurons[neuron_id].end(), static_cast<size_t>(val));
                     if (it != neurons[neuron_id].end()) {
                         neuron_set = true;
+                        size_t fd = d;
+                        size_t fy = y;
 
                         if (flip_depth) {
-                            image_out.data[image_out.depth - d - 1][image_out.height - y - 1][x] = static_cast<uint8_t>(id_to_write);
-                        } else {
-                            image_out.data[d][image_out.height - y - 1][x] = static_cast<uint8_t>(id_to_write);
+                            fd = image_out.depth - d - 1;
                         }
+                        if (flip_height){
+                            fy = image_out.height - y - 1;
+                        }
+                        
+                        image_out.data[fd][fy][x] = static_cast<uint8_t>(id_to_write);
+
                     } 
                 }
             }
