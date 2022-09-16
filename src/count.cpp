@@ -179,7 +179,7 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask){
     for (uint32_t z = 0; z < raw.depth; z++) {
         for (uint32_t y = 0; y < raw.height; y++) {
             for (uint32_t x = 0; x < raw.width; x++) {
-                short m = mask.data[z][y][x];
+                uint8_t m = mask.data[z][y][x];
                 switch (m)
                 {
                 case 1:
@@ -277,7 +277,6 @@ int main (int argc, char ** argv) {
 
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
-        bool paired = false;
         std::vector<std::string> tokens = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_anno), "_.-");
         std::string id = tokens[0];
         std::string mask_path = options.output_path + "/" + options.prefix + libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
@@ -326,11 +325,6 @@ int main (int argc, char ** argv) {
                     }
                 }
             }
-        }
-
-        if (!paired){
-            std::cout << "Failed to pair " << tiff_anno << std::endl;
-            remove(mask_path.c_str());
         }
     }
 
