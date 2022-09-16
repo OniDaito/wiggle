@@ -312,8 +312,8 @@ int main (int argc, char ** argv) {
                                     Counts base_count = GetCSVCounts(dat);
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
                                     Counts count = GetCount(raw_data, mask);
-                                    out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2
-                                        << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 
+                                    out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << ","
+                                        << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 << ","
                                         << count.asi1 - base_count.asi1 << "," << count.asi2 - base_count.asi2  << "," <<  count.asj1 - base_count.asj1  << "," << count.asj2 - base_count.asj2 << std::endl;
 
                                     break;
