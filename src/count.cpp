@@ -166,9 +166,9 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
-    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
+    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
+    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
+    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
 
     return neuron_mask;
 }
