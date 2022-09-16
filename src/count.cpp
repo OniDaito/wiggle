@@ -190,6 +190,12 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
 Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCounts &base){
     Counts counts = {0, 0, 0, 0};
 
+    // Computed in the same way that neuroshed does
+    std::vector<uint16_t> asi1;
+    std::vector<uint16_t> asi2;
+    std::vector<uint16_t> asj1;
+    std::vector<uint16_t> asj2;
+
     for (uint32_t z = 0; z < raw.depth; z++) {
         for (uint32_t y = 0; y < raw.height; y++) {
             for (uint32_t x = 0; x < raw.width; x++) {
@@ -198,23 +204,44 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCount
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += static_cast<int64_t>(raw.data[z][y][x]) - base.asi1_mode;
+                    asi1.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
                     break;
                 case 2:
-                    counts.asi2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asi2_mode;
+                    asi2.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
                     break;
                 case 3:
-                    counts.asj1 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj1_mode;
-                    std::cout << static_cast<int64_t>(raw.data[z][y][x]) << std::endl;
+                    asj1.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
                     break;
                 case 4:
-                    counts.asj2 += static_cast<int64_t>(raw.data[z][y][x]) - base.asj2_mode;
+                    asj2.push_back(static_cast<uint16_t>(raw.data[z][y][x]));
                     break;
                 default:
                     break;
                 }
             }
         }
+    }
+
+    std::sort(asi1.begin(), asi1.end());
+    std::sort(asi2.begin(), asi2.end());
+    std::sort(asj1.begin(), asj1.end());
+    std::sort(asj2.begin(), asj2.end());
+
+    std::reverse(asi1.begin(), asi1.end());
+    std::reverse(asi2.begin(), asi2.end());
+    std::reverse(asj1.begin(), asi1.end());
+    std::reverse(asj2.begin(), asj2.end());
+
+    asi1.resize(4000, 0);
+    asi2.resize(4000, 0);
+    asj1.resize(4000, 0);
+    asj2.resize(4000, 0);
+
+    for (size_t i = 0; i < 4000; i++) {
+        counts.asi1 += asi1[i] - base.asi1_mode;
+        counts.asi2 += asi2[i] - base.asi2_mode;
+        counts.asj1 += asj1[i] - base.asj1_mode;
+        counts.asj2 += asj2[i] - base.asj2_mode;
     }
 
     return counts;
