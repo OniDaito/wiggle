@@ -88,8 +88,8 @@ ImageU16L3D TiffToStack(Options &options, std::string &tiff_path) {
             for (uint32_t x = 0; x < stacked.width; x++) {
                 uint16_t val = image.data[(d * stacked.height * options.channels) + coff + y][x];
                 // val = std::max(val - options.cutoff, 0);
-                //stacked.data[d][stacked.height - y - 1][x] = val;
-                stacked.data[d][y][x] = val;
+                stacked.data[d][stacked.height - y - 1][x] = val;
+                //stacked.data[d][y][x] = val;
             }
         }
     }
