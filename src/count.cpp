@@ -353,6 +353,7 @@ int main (int argc, char ** argv) {
                                     std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
                                     ImageU8L3D mask = ProcessMask(options, tiff_anno, log);
                                     BaseCounts base_count = GetCSVCounts(dat);
+                                    std::cout << base_count.asi1_mode << " " <<  base_count.asi2_mode << " " <<  base_count.asj1_mode << " " << base_count.asj2_mode << std::endl;
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
                                     Counts count = GetCount(raw_data, mask, base_count);
                                     out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << ","
