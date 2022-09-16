@@ -59,6 +59,19 @@ typedef struct {
     unsigned long asj2;
 } Counts;
 
+typedef struct {
+    unsigned long asi1;
+    unsigned long asi2;
+    unsigned long asj1;
+    unsigned long asj2;
+    unsigned long asi1_mode;
+    unsigned long asi2_mode;
+    unsigned long asj1_mode;
+    unsigned long asj2_mode;
+
+} BaseCounts;
+
+
 using namespace imagine;
 
 /**
@@ -108,8 +121,8 @@ bool is_csv_empty(std::string path) {
 }
 
 
-Counts GetCSVCounts(std::string &coord_path) {
-    Counts counts = {0, 0, 0, 0};
+BaseCounts GetCSVCounts(std::string &coord_path) {
+    BaseCounts counts = {0, 0, 0, 0, 0};
 
     // Now write out the graph co-ords
      // Read the dat file and write out the coordinates in order as an entry in a CSV file
@@ -173,7 +186,7 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
     return neuron_mask;
 }
 
-Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask){
+Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask,  const BaseCounts &base){
     Counts counts = {0, 0, 0, 0};
     uint16_t noise = 270;
 
@@ -184,16 +197,16 @@ Counts GetCount(const ImageU16L3D &raw, const ImageU8L3D &mask){
                 switch (m)
                 {
                 case 1:
-                    counts.asi1 += raw.data[z][y][x] - noise;
+                    counts.asi1 += raw.data[z][y][x] - base.asi1_mode;
                     break;
                 case 2:
-                    counts.asi2 += raw.data[z][y][x] - noise;
+                    counts.asi2 += raw.data[z][y][x] - base.asi2_mode;
                     break;
                 case 3:
-                    counts.asj1 += raw.data[z][y][x] - noise;
+                    counts.asj1 += raw.data[z][y][x] - base.asj1_mode;
                     break;
                 case 4:
-                    counts.asj2 += raw.data[z][y][x] - noise;
+                    counts.asj2 += raw.data[z][y][x] - base.asj2_mode;
                     break;
                 default:
                     break;
@@ -310,9 +323,9 @@ int main (int argc, char ** argv) {
                                 try {
                                     std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
                                     ImageU8L3D mask = ProcessMask(options, tiff_anno, log);
-                                    Counts base_count = GetCSVCounts(dat);
+                                    BaseCounts base_count = GetCSVCounts(dat);
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
-                                    Counts count = GetCount(raw_data, mask);
+                                    Counts count = GetCount(raw_data, mask, base_count);
                                     out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << ","
                                         << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 << std::endl;
 
