@@ -108,6 +108,27 @@ bool is_csv_empty(std::string path) {
 }
 
 
+Counts GetCSVCounts(std::string &coord_path) {
+    Counts counts = {0, 0, 0, 0};
+
+    // Now write out the graph co-ords
+     // Read the dat file and write out the coordinates in order as an entry in a CSV file
+    std::vector<std::string> lines = libcee::ReadFileLines(coord_path);
+    if(lines.size() != 4) {  return counts; }
+
+    for (std::string line : lines) {
+        std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
+        std::string n = libcee::RemoveChar(libcee::RemoveChar(tokens[0], ','), ' ');
+        long c = libcee::FromString<float>(tokens[1]);
+        if (n == "ASI-1") { counts.asi1 = c; }
+        if (n == "ASI-2") { counts.asi2 = c; }
+        if (n == "ASJ-1") { counts.asj1 = c; }
+        if (n == "ASJ-2") { counts.asj2 = c; }
+    }
+    return counts;
+}
+
+
 /**
  * Given a tiff file and a log file, create a set of 
  * images for each neuron we are interested in.
@@ -119,7 +140,7 @@ bool is_csv_empty(std::string path) {
  * @return bool if success or not
  */
 
-ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, std::string &coord_path, int image_idx) {
+ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &log_path) {
     std::vector<std::string> lines = libcee::ReadFileLines(log_path);
     ImageU16L image_in = LoadTiff<ImageU16L>(tiff_path);
     size_t idx = 0;
@@ -142,20 +163,6 @@ ImageU8L3D ProcessMask(Options &options, std::string &tiff_path, std::string &lo
 
     // Join all our neurons
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.depth, options.stacksize);
-    bool n1 = false, n2 = false, n3 = false, n4 = false;
-
-    if (options.threeclass) {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 1);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 2);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 2);
-    } else {
-        n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, 1);
-        n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, 2);
-        n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, 3);
-        n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, 4);
-    }
-   
     return neuron_mask;
 }
 
@@ -264,7 +271,7 @@ int main (int argc, char ** argv) {
     out_stream.open(options.output_log_path, std::ios::app);
 
     if (write_csv_header) {
-        out_stream << "fileraw,filemask,asi1,asi2,asj1,asj2" << std::endl;
+        out_stream << "fileraw,filemask,asi1,asi2,asj1,asj2,basi1,basi2,basj1,basj2,dasi1,dasi2,dasj1,dasj2" << std::endl;
     }
 
     // Pair up the tiffs with their log file and then the input and process them.
@@ -301,10 +308,13 @@ int main (int argc, char ** argv) {
                             if (ida == idb) {
                                 try {
                                     std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
-                                    ImageU8L3D mask = ProcessMask(options, tiff_anno, log, dat, image_idx);
+                                    ImageU8L3D mask = ProcessMask(options, tiff_anno, log);
+                                    Counts base_count = GetCSVCounts(dat);
                                     ImageU16L3D raw_data = TiffToStack(options, tiff_input);
                                     Counts count = GetCount(raw_data, mask);
-                                    out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2 << std::endl;
+                                    out_stream << tiff_input << "," << tiff_anno << "," << count.asi1 << "," << count.asi2 << "," << count.asj1 << "," << count.asj2
+                                        << base_count.asi1 << "," << base_count.asi2 << "," << base_count.asj1 << "," << base_count.asj2 
+                                        << count.asi1 - base_count.asi1 << "," << count.asi2 - base_count.asi2  << "," <<  count.asj1 - base_count.asj1  << "," << count.asj2 - base_count.asj2 << std::endl;
 
                                     break;
                                 } catch (const std::exception &e) {
