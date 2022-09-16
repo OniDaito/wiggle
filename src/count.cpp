@@ -53,21 +53,21 @@ typedef struct {
 } Options;
 
 typedef struct {
-    unsigned long asi1;
-    unsigned long asi2;
-    unsigned long asj1;
-    unsigned long asj2;
+    int64_t asi1;
+    int64_t asi2;
+    int64_t asj1;
+    int64_t asj2;
 } Counts;
 
 typedef struct {
-    unsigned long asi1;
-    unsigned long asi2;
-    unsigned long asj1;
-    unsigned long asj2;
-    unsigned long asi1_mode;
-    unsigned long asi2_mode;
-    unsigned long asj1_mode;
-    unsigned long asj2_mode;
+    int64_t asi1;
+    int64_t asi2;
+    int64_t asj1;
+    int64_t asj2;
+    int64_t asi1_mode;
+    int64_t asi2_mode;
+    int64_t asj1_mode;
+    int64_t asj2_mode;
 
 } BaseCounts;
 
@@ -132,8 +132,8 @@ BaseCounts GetCSVCounts(std::string &coord_path) {
     for (std::string line : lines) {
         std::vector<std::string> tokens = libcee::SplitStringWhitespace(line);
         std::string n = libcee::RemoveChar(libcee::RemoveChar(tokens[0], ','), ' ');
-        long c = libcee::FromString<uint64_t>(tokens[1]);
-        long m = libcee::FromString<uint64_t>(tokens[6]);
+        uint64_t c = libcee::FromString<uint64_t>(tokens[1]);
+        uint64_t m = libcee::FromString<uint64_t>(tokens[6]);
         if (n == "ASI-1") { counts.asi1 = c; counts.asi1_mode = m; }
         if (n == "ASI-2") { counts.asi2 = c; counts.asi2_mode = m; }
         if (n == "ASJ-1") { counts.asj1 = c; counts.asj1_mode = m; }
