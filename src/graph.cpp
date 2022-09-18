@@ -107,8 +107,8 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
  */
 
 bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
-    ImageU16L image = LoadTiff<ImageU16L>(tiff_path);
-    ImageU16L3D stacked(image.width, image.height / (options.stacksize * options.channels), options.stacksize);
+    ImageU16L image = LoadTiff<ImageU16L>(tiff_path); 
+    ImageU16L3D stacked(image.width, (image.height / (options.stacksize * options.channels)), options.stacksize);
     uint coff = 0;
 
     if (options.bottom) {
@@ -160,6 +160,10 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 FlipVerticalI(summed);
 
                 if (options.final_width != summed.width || options.final_height != summed.height) {
+                    // Check the depth. Drop one if it's an odd number - the last one.
+                    if (summed.depth % 2 == 1) {
+                      summed.data.pop_back();
+                    }
                     summed = Resize(summed, options.final_width, options.final_height);
                 }
 
@@ -174,6 +178,9 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 //FlipVerticalI(normalised);
                 //ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
                 FlipVerticalI(rotated);
+                if (rotated.depth % 2 == 1) {
+                    rotated.data.pop_back();
+                }
                 ImageF32L3D resized = Resize(rotated, options.final_width, options.final_height, options.final_depth);
                 SaveFITS(output_path, resized);
             }
@@ -336,12 +343,19 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         // Not sure why the inverse. GLM versus our sampling I suppose
         AugmentGraph(graph, tgraph,  glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
         
+        if (mipped.depth % 2 == 1) {
+            mipped.data.pop_back();
+        }
+        
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
         FlipVerticalI(resized);
 
         if (options.flatten){
             SaveFITS(output_path, resized);
         } else {
+            if (prefinal.depth % 2 == 1) {
+                prefinal.data.pop_back();
+            }
             ImageU8L3D resized3d = Resize(prefinal, options.final_width, options.final_height, options.final_depth);
             FlipVerticalI(resized3d);
             SaveFITS(output_path, resized3d);
