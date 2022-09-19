@@ -44,9 +44,9 @@ typedef struct {
     bool max_intensity = false;    // If flattening, use max intensity
     int channels = 2;           // 2 Channels initially in these images
     int stacksize = 51;         // How many stacks in our input 2D image
-    int final_depth = 16;             // number of z-slices - TODO - should be set automatically along with width and height
-    int final_width = 128;            // The input dimensions of each slice
-    int final_height = 128;
+    int final_depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
+    int final_width = 200;            // The input dimensions of each slice
+    int final_height = 200;
     size_t roi_xy = 200;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
@@ -240,12 +240,18 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.stacksize, options.stacksize);
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
-    // Set all neurons to 1 - we are only using the mask for the ROI
-    n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
-    n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 2);
-    n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 3);
-    n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 4);
-
+    if(options.threeclass){
+      n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+      n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 1);
+      n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 2);
+      n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 2);
+    } else {
+      n1 = SetNeuron(image_in, neuron_mask, neurons, 1, true, true, 1);
+      n2 = SetNeuron(image_in, neuron_mask, neurons, 2, true, true, 2);
+      n3 = SetNeuron(image_in, neuron_mask, neurons, 3, true, true, 3);
+      n4 = SetNeuron(image_in, neuron_mask, neurons, 4, true, true, 4);
+    }
+    
     if (!n1 || !n2 || !n3 || !n4) {
         return false;
     }
