@@ -280,7 +280,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     roi.xy_dim = roi_found.xy_dim * 2;
     roi.depth = roi_found.depth * 2;
 
-    std::cout << "ROI: " << libcee::ToString(roi.x) << ", " << libcee::ToString(roi.y) << ", " << libcee::ToString(roi.z) << ", " << roi.xy_dim << "," << roi.depth << std::endl;
+    std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Read the dat file and write out the coordinates in order as an entry in a CSV file
@@ -344,7 +344,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::vector<glm::vec4> tgraph;
         // Not sure why the inverse. GLM versus our sampling I suppose
         AugmentGraph(graph, tgraph,  glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
-        
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
         FlipVerticalI(resized);
 
