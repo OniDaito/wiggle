@@ -160,10 +160,6 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
                 FlipVerticalI(summed);
 
                 if (options.final_width != summed.width || options.final_height != summed.height) {
-                    // Check the depth. Drop one if it's an odd number - the last one.
-                    if (summed.depth % 2 == 1) {
-                      summed.data.pop_back();
-                    }
                     summed = Resize(summed, options.final_width, options.final_height);
                 }
 
@@ -348,10 +344,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::vector<glm::vec4> tgraph;
         // Not sure why the inverse. GLM versus our sampling I suppose
         AugmentGraph(graph, tgraph,  glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
-        
-        if (mipped.depth % 2 == 1) {
-            mipped.data.pop_back();
-        }
         
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
         FlipVerticalI(resized);
