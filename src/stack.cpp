@@ -83,6 +83,7 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
 
     std::vector<std::string> end = libcee::SplitStringString(tiff_path, options.output_path);
     std::string new_path = libcee::StringReplace(options.output_path, options.base_path, end[0]);
+    std::cout << "new path " << new_path << std::endl;
     std::string output_path = new_path.replace(new_path.length() - 5, 5, ".fits");
     std::string new_dir = libcee::PathFromPath(output_path);
 
@@ -157,14 +158,8 @@ int main (int argc, char ** argv) {
         }
     }
 
-    //return EXIT_FAILURE;
-    std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
-
-
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
 
-    
-    
     for (std::string tiff_input : tiff_input_files) {
    
         if (libcee::StringContains(libcee::FilenameFromPath(tiff_input), "_.-"), "AutoStack") {
