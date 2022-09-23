@@ -82,8 +82,7 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     }
 
     std::vector<std::string> end = libcee::SplitStringString(tiff_path, options.output_path);
-    std::string new_path = libcee::StringReplace(options.output_path, options.base_path, end[0]);
-    std::cout << "new path " << new_path << std::endl;
+    std::string new_path =   tiff_path.replace(0, options.base_path.length(), options.output_path);
     std::string output_path = new_path.replace(new_path.length() - 5, 5, ".fits");
     std::string new_dir = libcee::PathFromPath(output_path);
 
