@@ -325,7 +325,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
     ImageU8L mipped = Project(cropped, ProjectionType::MAX_INTENSITY);
 
-    std::vector<glm::vec4> tgraph;
     // Not sure why the inverse. GLM versus our sampling I suppose
     ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
     FlipVerticalI(resized);
@@ -353,7 +352,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
     // Write out to the CSV file
     for (int j = 0; j < 4; j++){
-        glm::vec4 av = tgraph[j];
+        glm::vec4 av = graph[j];
         std::string x = libcee::ToString(av.x * rw);
         std::string y = libcee::ToString((static_cast<float>(options.roi_xy) - av.y) * rh);
         std::string z = libcee::ToString(av.z * rd);
