@@ -99,9 +99,18 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
             stacked.data.pop_back();
         }
         ImageU16L3D resized = Resize(stacked, options.final_width, options.final_height, options.final_depth);
-        SaveFITS(output_path, resized);
+        try {
+            SaveFITS(output_path, resized);
+        } catch (std::exception& exc) {
+            std::cout << "Failed to save " << output_path << std::endl;
+        }
+
     } else {
-        SaveFITS(output_path, stacked);   
+        try {
+            SaveFITS(output_path, stacked);   
+        } catch (std::exception& exc) {
+            std::cout << "Failed to save " << output_path << std::endl;
+        }
     }
 
     return true;
