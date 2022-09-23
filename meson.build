@@ -76,6 +76,15 @@ executable('three',
           link_args : '-Wl,-lpthread')
 
 # three
+executable('noaug',
+          'src/noaug.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
+# count
 executable('count',
           'src/count.cpp',
           install : false,
