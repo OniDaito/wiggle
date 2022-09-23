@@ -18,6 +18,7 @@
 #include <libcee/threadpool.hpp>
 #include <imagine/imagine.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <sys/stat.h>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -44,6 +45,12 @@ typedef struct {
 } Options;
 
 using namespace imagine;
+
+bool folder_exists(std::string foldername)  {
+    struct stat st;
+    stat(foldername.c_str(), &st);
+    return st.st_mode & S_IFDIR;
+}
 
 
 /**
@@ -77,6 +84,12 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
     std::vector<std::string> end = libcee::SplitStringString(tiff_path, options.output_path);
     std::string new_path = libcee::StringReplace(options.output_path, options.base_path, end[0]);
     std::string output_path = new_path.replace(new_path.length() - 5, 5, ".fits");
+    std::string new_dir = libcee::PathFromPath(output_path);
+
+    if (!folder_exists(new_dir)) {
+        mkdir(new_dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    }
+   
     std::cout << "Saving new fits to " << output_path << std::endl;
 
     FlipVerticalI(stacked);
