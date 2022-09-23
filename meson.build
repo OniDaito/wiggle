@@ -75,9 +75,18 @@ executable('three',
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
-# three
+# noaug
 executable('noaug',
           'src/noaug.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
+# stack
+executable('stack',
+          'src/stack.cpp',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
