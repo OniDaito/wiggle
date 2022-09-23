@@ -27,6 +27,7 @@
 typedef struct {
     std::string image_path = ".";
     std::string output_path = ".";
+    std::string base_path = ".";
     bool rename = false;
     bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
@@ -73,10 +74,10 @@ bool TiffToFits(Options &options, std::string &tiff_path) {
         }
     }
 
-    std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_path), "_.-");
-    std::string image_id = tokens_log[3];
-    image_id = libcee::StringRemove(image_id, "0xAutoStack");
-    std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
+    std::vector<std::string> end = libcee::SplitStringString(tiff_path, options.output_path);
+    std::string new_path = libcee::StringReplace(options.output_path, options.base_path, end[0]);
+    std::string output_path = new_path.replace(new_path.length() - 5, 5, ".fits");
+    std::cout << "Saving new fits to " << output_path << std::endl;
 
     FlipVerticalI(stacked);
 
@@ -109,7 +110,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:l:p:tz:w:h:s:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -118,17 +119,15 @@ int main (int argc, char ** argv) {
                 break;
             case 'o' :
                 options.output_path = std::string(optarg);
-                image_idx = GetOffetNumber(options.output_path);
+                break;
+            case 'l' :
+                options.base_path = std::string(optarg);
                 break;
             case 'b':
                 options.bottom = true;
                 break;
             case 't' :
                 options.threeclass = true;
-                break;
-            case 'n':
-                options.offset_number = libcee::FromString<int>(optarg);
-                image_idx = options.offset_number;
                 break;
             case 'z':
                 options.final_depth = libcee::FromString<int>(optarg);
