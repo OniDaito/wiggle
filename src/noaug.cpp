@@ -279,6 +279,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
  
     std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
     ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    FlipVerticalI(cropped);
 
     // Read the dat file and write out the coordinates in order as an entry in a CSV file
     std::vector<std::string> lines = libcee::ReadFileLines(coord_path);
@@ -327,7 +328,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
 
     // Not sure why the inverse. GLM versus our sampling I suppose
     ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
-    FlipVerticalI(resized);
 
     if (options.flatten){
         SaveFITS(output_path, resized);
@@ -338,7 +338,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
             }
 
             ImageU8L3D resized3d = Resize(cropped, options.final_width, options.final_height, options.final_depth);
-            FlipVerticalI(resized3d);
             SaveFITS(output_path, resized3d);
         } else {
             SaveFITS(output_path, cropped);
