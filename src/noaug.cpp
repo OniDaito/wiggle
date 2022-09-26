@@ -38,6 +38,7 @@ typedef struct {
     bool rename = false;
     bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
+    bool drop_last = false;
     int offset_number = 0;
     bool bottom = false;
     bool deconv = false;         // Do we deconvolve and all that?
@@ -124,6 +125,11 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         }
     }
 
+    if (options.drop_last) {
+        stacked.data.pop_back();
+        stacked.depth -= 1;
+    } 
+
     std::vector<std::string> tokens_log = libcee::SplitStringChars(libcee::FilenameFromPath(tiff_path), "_.-");
     std::string image_id = tokens_log[3];
     image_id = libcee::StringRemove(image_id, "0xAutoStack");
@@ -167,6 +173,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         if (options.final_width != processed.width || options.final_height != processed.height || options.final_depth != processed.depth) {
             if (processed.depth % 2 == 1) {
                 processed.data.pop_back();
+                processed.depth -= 1;
             }
             ImageF32L3D resized = Resize(processed, options.final_width, options.final_height, options.final_depth);
             SaveFITS(output_path, resized);
@@ -220,8 +227,15 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         }
     }
 
+
     // Join all our neurons
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.stacksize, options.stacksize);
+
+    if (options.drop_last) {
+        neuron_mask.data.pop_back();
+        neuron_mask.depth -= 1;
+    } 
+
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     if(options.threeclass){
@@ -379,7 +393,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmnv:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -413,6 +427,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'm':
                 options.max_intensity = true;
+                break;
+            case 'v':
+                options.drop_last = true;
                 break;
             case 't' :
                 options.threeclass = true;
