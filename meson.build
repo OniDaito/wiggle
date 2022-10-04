@@ -39,15 +39,6 @@ wiggle = library('wiggle', sources : [
   link_args : '-lpthread',
 )
 
-# volume
-executable('volume',
-          'src/volume.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libcee, imagine, glfw],
-          link_with : wiggle,
-          link_args : '-Wl,-lpthread')
-
 # Single pair
 executable('single',
           'src/single.cpp',
