@@ -90,7 +90,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
         // Deconvolve with a known PSF
         std::string path_kernel(psf_path);
         ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-        ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
+        ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 20);
         
         return deconved;
     }
