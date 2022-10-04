@@ -142,7 +142,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv);
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv, options.psf_path);
   
     // Rotate, normalise then sum projection
     output_path = options.output_path + "/" + image_id + "_"  + "_layered.fits";

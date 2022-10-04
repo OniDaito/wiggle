@@ -35,6 +35,7 @@ typedef struct {
     std::string annotation_path = ".";
     std::string prefix = "";
     std::string output_log_path = "";
+    std::string psf_path = "./images/PSF_born_wolf_3d.tif";
     bool rename = false;
     bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
@@ -69,7 +70,7 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv, std::string &psf_path) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
@@ -86,7 +87,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
         //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
 
         // Deconvolve with a known PSF
-        std::string path_kernel("./images/PSF3.tif");
+        std::string path_kernel(psf_path);
         ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
         ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
         
@@ -135,7 +136,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv);
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv, options.psf_path);
   
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
@@ -394,7 +395,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:k:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -456,6 +457,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'q':
                 options.num_augs = libcee::FromString<int>(optarg);
+                break;
+            case 'k' :
+                options.psf_path = std::string(optarg);
                 break;
         }
     }
