@@ -83,11 +83,21 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                     float tt = ceil(static_cast<float>(z) / zscale);
                     float tv = static_cast<float>(z) / zscale;
                     size_t ic = it + 1;
+                    
+                    if (ic >= resampled.depth) {
+                         ic = it;
+                    }
+                    
                     float mix_n = 1.0 - (2.0 * (tt - tv));
                     float mix_og = (2.0 * (tt - tv));
 
                     if ((tt - tv) >= 0.5) {
                         size_t ic = it - 1;
+                        
+                        if (ic < 0) {
+                            ic = 0;
+                        }
+                        
                         float mix_n = 1.0 - (2.0 * (tv - tb));
                         float mix_og = (2.0 * (tv - tb));
                     }
