@@ -84,7 +84,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                     float tv = static_cast<float>(z) / zscale;
                     size_t ic = it + 1;
                     
-                    if (ic >= resampled.depth) {
+                    if (ic >= image.depth) {
                          ic = it;
                     }
                     
@@ -102,7 +102,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                         float mix_og = (2.0 * (tv - tb));
                     }
 
-                    float interped = mix_og * static_cast<float>(image.data[it][y][x]) + mix_n *  static_cast<float>(image.data[ic][y][x]); 
+                    float interped = mix_og * static_cast<float>(image.data[it][y][x]) + mix_n * static_cast<float>(image.data[ic][y][x]); 
                     resampled.data[z][y][x] = interped; // TODO - this is naughty as we can't assume the float goes to the proper type of resampled
 
                 } else {
