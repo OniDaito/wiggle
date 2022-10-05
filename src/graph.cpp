@@ -40,6 +40,8 @@ typedef struct {
     bool flatten = false;
     bool threeclass = false;    // Forget 1 and 2 and just go with ASI, ASJ or background.
     int offset_number = 0;
+    bool subpixel = true;
+    bool interz = true;
     bool bottom = false;
     bool deconv = false;         // Do we deconvolve and all that?
     bool max_intensity = false;    // If flattening, use max intensity
@@ -149,7 +151,7 @@ bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &ro
             std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
             std::string output_path = options.output_path + "/" + image_id + "_" + aug_id + "_layered.fits";
             glm::quat q = ROTS[i];
-            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, true); 
+            ImageF32L3D rotated = Augment(processed, q, options.roi_xy, options.depth_scale, options.subpixel, options.interz); 
             if (options.flatten) {
                 auto ptype = ProjectionType::SUM;
                 
@@ -339,7 +341,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
         std::string csv_line =  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + ", ";
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
-        ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale, false);
+        ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale, false, false);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
 
         std::vector<glm::vec4> tgraph;

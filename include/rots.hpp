@@ -59,7 +59,7 @@
 
 
 template<typename T>
-T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool subpixel) {
+T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool subpixel, bool iterz) {
     assert(image.width == image.height);
     assert(cube_dim < image.width);
     assert(cube_dim / zscale < image.depth);
@@ -76,8 +76,28 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
     for (size_t z = 0; z < resampled.depth; z++) {
         for (size_t y = 0; y < resampled.height; y++) {
             for (size_t x = 0; x < resampled.width; x++) {
-                size_t sample_z = static_cast<size_t>(floor(static_cast<float>(z) / zscale));
-                resampled.data[z][y][x] = image.data[sample_z][y][x];
+                size_t it =  static_cast<size_t>(floor(static_cast<float>(z) / zscale));
+
+                if (iterz){
+                    float tb = floor(static_cast<float>(z) / zscale);
+                    float tt = ceil(static_cast<float>(z) / zscale);
+                    float tv = static_cast<float>(z) / zscale;
+                    size_t ic = it + 1;
+                    float mix_n = 1.0 - (2.0 * (tt - tv));
+                    float mix_og = (2.0 * (tt - tv));
+
+                    if ((tt - tv) >= 0.5) {
+                        size_t ic = it - 1;
+                        float mix_n = 1.0 - (2.0 * (tv - tb));
+                        float mix_og = (2.0 * (tv - tb));
+                    }
+
+                    float interped = mix_og * static_cast<float>(image.data[it][y][x]) + mix_n *  static_cast<float>(image.data[ic][y][x]); 
+                    resampled.data[z][y][x] = interped; // TODO - this is naughty as we can't assume the float goes to the proper type of resampled
+
+                } else {
+                    resampled.data[z][y][x] = image.data[it][y][x];
+                }
             }
         }
     }
@@ -142,7 +162,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                         }
                     }
 
-                    augmented.data[z][y][x] = val;
+                    augmented.data[z][y][x] = val; // TODO - are we being naughty here as val is a float and we can't be sure augmented.data is a float
                 } else {
                     int cx = static_cast <int>((v.x + 1.0) / 2.0 * resampled.width);
                     int cy = static_cast <int>((v.y + 1.0) / 2.0 * resampled.height);
