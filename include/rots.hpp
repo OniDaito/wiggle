@@ -97,7 +97,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                         // Closer to the bottom end
                         ic = it - 1;
                         
-                        if (ic < 0) {
+                        if (it == 0) {
                             ic = 0;
                         }
                         
