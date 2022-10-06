@@ -68,8 +68,6 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
 
     T resampled(image.width, image.width, image.width);
 
-    std::cout << "subpixel, interplateZ: " << subpixel << ", " << iterz << std::endl;
-
     // Essentially, we want a cube, smaller than the input image.
     // Z is a special case and requires scaling.
     T augmented(cube_dim, cube_dim, cube_dim);

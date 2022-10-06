@@ -109,7 +109,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, boo
  * @return bool if success or not
  */
 
-bool TiffToFits(Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
+bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, ROI &roi) {
     ImageU16L image = LoadTiff<ImageU16L>(tiff_path); 
     ImageU16L3D stacked(image.width, (image.height / (options.stacksize * options.channels)), options.stacksize);
     uint coff = 0;
@@ -477,6 +477,8 @@ int main (int argc, char ** argv) {
     //return EXIT_FAILURE;
     std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
     std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
+    std::cout << "Subpixel, interplateZ: " << options.subpixel << ", " << options.interz << std::endl;
+
 
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
