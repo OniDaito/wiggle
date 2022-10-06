@@ -389,6 +389,7 @@ int main (int argc, char ** argv) {
     int c;
     static struct option long_options[] = {
         {"no-interz", no_argument, 0, 0},
+        {"no-subpixel", no_argument, 0, 0},
         {NULL, 0, NULL, 0}
     };
 
@@ -466,6 +467,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'no-interz':
                 options.interz = false;
+                break;
+            case 'no-subpixel':
+                options.subpixel = false;
                 break;
         }
     }
