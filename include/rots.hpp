@@ -87,7 +87,7 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                     size_t ic = it + 1;
                     
                     if (ic >= image.depth) {
-                         ic = it;
+                        ic = it;
                     }
                     
                     float mix_n = 1.0 - (2.0 * (tt - tv));
@@ -101,8 +101,8 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                             ic = 0;
                         }
                         
-                        float mix_n = 1.0 - (2.0 * (tv - tb));
-                        float mix_og = (2.0 * (tv - tb));
+                        mix_n = 1.0 - (2.0 * (tv - tb));
+                        mix_og = (2.0 * (tv - tb));
                     }
 
                     float interped = mix_og * static_cast<float>(image.data[it][y][x]) + mix_n * static_cast<float>(image.data[ic][y][x]); 
