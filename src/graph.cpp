@@ -72,7 +72,7 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv, std::string &psf_path) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv, const std::string &psf_path) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
