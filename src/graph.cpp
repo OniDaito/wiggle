@@ -388,16 +388,14 @@ int main (int argc, char ** argv) {
     Options options;
     int c;
     static struct option long_options[] = {
-        {"image-path", 1, 0, 0},
-        {"output-path", 1, 0, 0},
-        {"prefix", 1, 0, 0},
+        {"no-interz", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
 
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:k:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:k:g:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -462,6 +460,12 @@ int main (int argc, char ** argv) {
                 break;
             case 'k' :
                 options.psf_path = std::string(optarg);
+                break;
+            case 'g':
+                RANDROT_GENERATOR.seed(libcee::FromString<int>(optarg));
+                break;
+            case 'no-interz':
+                options.interz = false;
                 break;
         }
     }

@@ -38,6 +38,8 @@
 
 #include "roi.hpp"
 
+extern std::default_random_engine RANDROT_GENERATOR;
+
 /**
  * Augment the input images 
  * 
