@@ -106,6 +106,9 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                     }
 
                     float interped = mix_og * static_cast<float>(image.data[it][y][x]) + mix_n * static_cast<float>(image.data[ic][y][x]); 
+                    if (it== 20 && y == 20 && x == 20) {
+                        std::cout << interped << std::endl;
+                    }
                     resampled.data[z][y][x] = interped; // TODO - this is naughty as we can't assume the float goes to the proper type of resampled
 
                 } else {
