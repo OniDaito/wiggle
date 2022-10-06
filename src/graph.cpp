@@ -388,7 +388,7 @@ int main (int argc, char ** argv) {
     Options options;
     int c;
     static struct option long_options[] = {
-        {"no-interz", 1, 0, 0},
+        {"no-interz", no_argument, 0, 0},
         {NULL, 0, NULL, 0}
     };
 
