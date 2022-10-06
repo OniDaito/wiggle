@@ -388,8 +388,8 @@ int main (int argc, char ** argv) {
     Options options;
     int c;
     static struct option long_options[] = {
-        {"no-interz", no_argument, 0, 0},
-        {"no-subpixel", no_argument, 0, 0},
+        {"no-interz", no_argument, NULL, 1},
+        {"no-subpixel", no_argument, NULL, 2},
         {NULL, 0, NULL, 0}
     };
 
@@ -465,10 +465,10 @@ int main (int argc, char ** argv) {
             case 'g':
                 RANDROT_GENERATOR.seed(libcee::FromString<int>(optarg));
                 break;
-            case 'no-interz':
+            case 1 :
                 options.interz = false;
                 break;
-            case 'no-subpixel':
+            case 2 :
                 options.subpixel = false;
                 break;
         }
