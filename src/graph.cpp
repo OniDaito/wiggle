@@ -173,12 +173,9 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
                 std::string output_path_jpg = options.output_path + "/" +  image_id + "_" + aug_id + "_raw.jpg";
                 SaveJPG(output_path_jpg, jpeged);
             } else {
-                // ImageF32L3D normalised = Normalise(rotated);
-                //FlipVerticalI(normalised);
-                //ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
                 FlipVerticalI(rotated);
-                
-                if (rotated.depth % 2 == 1) {
+
+                if (rotated.depth % options.final_depth == 1) {
                     rotated.data.pop_back();
                 }
 
