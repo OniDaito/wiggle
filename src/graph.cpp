@@ -177,10 +177,18 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
                 //FlipVerticalI(normalised);
                 //ImageF32L3D resized = Resize(normalised, options.final_width, options.final_height, options.final_depth);
                 FlipVerticalI(rotated);
+                
                 if (rotated.depth % 2 == 1) {
                     rotated.data.pop_back();
                 }
-                ImageF32L3D resized = Resize(rotated, options.final_width, options.final_height, options.final_depth);
+
+                ResizeMethod method = ResizeMethod::NEAREST;
+                
+                if (options.interz) {
+                    method = ResizeMethod::TRILINEAR;
+                }
+
+                ImageF32L3D resized = Resize(rotated, options.final_width, options.final_height, options.final_depth, method);
                 SaveFITS(output_path, resized);
             }
             

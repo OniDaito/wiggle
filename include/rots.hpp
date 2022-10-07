@@ -153,7 +153,6 @@ T Augment(T const &image, glm::quat rot, size_t cube_dim, float zscale, bool sub
                     for (int dz = -1; dz < 2; dz++) {
                         for (int dy = -1; dy < 2; dy++) {
                             for (int dx = -1; dx < 2; dx++) {
-                                
                                 int rx = cx + dx;
                                 int ry = cy + dy;
                                 int rz = cz + dz;
