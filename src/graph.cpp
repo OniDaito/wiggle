@@ -23,6 +23,7 @@
 #include <libcee/threadpool.hpp>
 #include <imagine/imagine.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <map>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -43,6 +44,7 @@ typedef struct {
     bool subpixel = true;
     bool interz = true;
     bool bottom = false;
+    bool autoback = false;      // Automatic background detection
     bool deconv = false;         // Do we deconvolve and all that?
     bool max_intensity = false;    // If flattening, use max intensity
     int channels = 2;           // 2 Channels initially in these images
@@ -72,15 +74,85 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, float noise, bool deconv, const std::string &psf_path) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, float noise, bool deconv, const std::string &psf_path) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
-    // Rather than a straight sub, do an if < noise, set to 0 instead.
-    //std::function<float(float)> noise_func = [noise](float x) { if (x < noise) {return 0.0f;} return x; };
-    //converted = ApplyFunc<ImageF32L3D, float>(converted, noise_func);
-    converted = Sub(converted, noise, true);
+
+    if (autoback){
+        // Perform an automatic background subtraction based on local means
+        size_t kernel_dia = 3; // A 3 x 3 x 3 kernel to compute the average
+        size_t kernel_rad = 1;
+        std::vector<int> modes;
+
+        for (uint32_t z = kernel_rad; z < converted.depth - kernel_rad; z++) {
+            for (uint32_t y = kernel_rad; y < converted.height - kernel_rad; y++) {
+                for (uint32_t x = kernel_rad; x < converted.width - kernel_rad; x++) {
+                    // Add up all the pixels - 27 of them
+                    float avg = converted.data[z][y][x];
+                    // First 9
+                    avg += converted.data[z-kernel_rad][y-kernel_rad][x-kernel_rad];
+                    avg += converted.data[z-kernel_rad][y-kernel_rad][x];
+                    avg += converted.data[z-kernel_rad][y-kernel_rad][x+kernel_rad];
+                    avg += converted.data[z-kernel_rad][y][x-kernel_rad];
+                    avg += converted.data[z-kernel_rad][y][x];
+                    avg += converted.data[z-kernel_rad][y][x+kernel_rad];
+                    avg += converted.data[z-kernel_rad][y+kernel_rad][x-kernel_rad];
+                    avg += converted.data[z-kernel_rad][y+kernel_rad][x];
+                    avg += converted.data[z-kernel_rad][y+kernel_rad][x+kernel_rad];
+
+                    // Mid 8
+                    avg += converted.data[z][y-kernel_rad][x-kernel_rad];
+                    avg += converted.data[z][y-kernel_rad][x];
+                    avg += converted.data[z][y-kernel_rad][x+kernel_rad];
+                    avg += converted.data[z][y][x-kernel_rad];
+                    avg += converted.data[z][y][x+kernel_rad];
+                    avg += converted.data[z][y+kernel_rad][x-kernel_rad];
+                    avg += converted.data[z][y+kernel_rad][x];
+                    avg += converted.data[z][y+kernel_rad][x+kernel_rad];
+
+                    // Last 9
+                    avg += converted.data[z+kernel_rad][y-kernel_rad][x-kernel_rad];
+                    avg += converted.data[z+kernel_rad][y-kernel_rad][x];
+                    avg += converted.data[z+kernel_rad][y-kernel_rad][x+kernel_rad];
+                    avg += converted.data[z+kernel_rad][y][x-kernel_rad];
+                    avg += converted.data[z+kernel_rad][y][x];
+                    avg += converted.data[z+kernel_rad][y][x+kernel_rad];
+                    avg += converted.data[z+kernel_rad][y+kernel_rad][x-kernel_rad];
+                    avg += converted.data[z+kernel_rad][y+kernel_rad][x];
+                    avg += converted.data[z+kernel_rad][y+kernel_rad][x+kernel_rad];
+
+                    avg /= 27.0;
+                    int mode = static_cast<int>(round(avg));
+                    modes.push_back(mode);
+                }
+            }
+        }
+
+        typedef std::pair<int, int> mode_pair;
+
+        struct mode_predicate {
+            bool operator() (mode_pair const& lhs, mode_pair const& rhs) {
+                return lhs.second < rhs.second;
+            }
+        };
+
+        // Now find the mode of all the values we have
+        std::map<int, int> mode_map;
+
+        for (int n = 0; n < modes.size(); n++) {
+            mode_map[modes[n]]++;
+        }
+
+        mode_predicate mp;
+        int final_mode = std::max_element(mode_map.begin(), mode_map.end(), mp)->first;
+        std::cout << "Background Value:" << final_mode << std::endl; 
+        converted = Sub(converted, static_cast<float>(final_mode), true);
+
+    } else {
+        converted = Sub(converted, noise, true);
+    }
 
     // Perform a subtraction on the images, removing background
     if (deconv){ 
@@ -138,7 +210,7 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.cutoff, options.deconv, options.psf_path);
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path);
   
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
@@ -401,7 +473,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmn:z:w:h:l:c:s:j:q:k:g:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmun:z:w:h:l:c:s:j:q:k:g:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -423,6 +495,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'r' :
                 options.rename = true;
+                break;
+            case 'u' :
+                options.autoback = true;
                 break;
             case 'b':
                 options.bottom = true;
