@@ -14,9 +14,34 @@
 
 using namespace imagine;
 
+template<typename T>
+void FindCOM(T &input, int &cx, int &cy, int &cz, int &sum) {
+    float dx = 0, dy = 0, dz = 0, tsum = 0;
+
+    for (int z = 0; z < input.depth; z++) {
+        for (int y = 0; y < input.height; y++) {
+            for (int x = 0; x < input.width; x++) {
+                if (input.data[z][y][x] != 0) {
+                    dx += static_cast<float>(x);
+                    dy += static_cast<float>(y);
+                    dz += static_cast<float>(z);
+                    tsum += std::min(1.0f, std::max(static_cast<float>(input.data[z][y][x]), 0.0f));
+                }
+            }
+        }
+    }
+
+    if (tsum > 0) {
+        cx = static_cast<int>(floor(dx / tsum));
+        cy = static_cast<int>(floor(dy / tsum));
+        cz = static_cast<int>(floor(dz / tsum));
+    }
+
+}
+
 
 ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
-    size_t step_size = 5; // For speed we don't go with 1
+    size_t step_size = 2; // For speed we don't go with 1
     size_t step_depth = 1; // 1 for depth as it's shorter
     size_t num_threads = 4; // One for each quadrant
 
@@ -37,12 +62,12 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
     std::vector<unsigned int> starts_y = {0, t_height - overlap, 0, t_height - overlap};
     std::vector<unsigned int> ends_y = {t_height + overlap, input.height, t_height + overlap, input.height};
     
-    for (int i = 0; i <num_threads; i++) {
-        int xs = starts_x[i];
-        int ys = starts_y[i];
+    for (int it = 0; it < num_threads; it++) {
+        int xs = starts_x[it];
+        int ys = starts_y[it];
         int zs = 0;
-        int xe = ends_x[i];
-        int ye = ends_y[i];
+        int xe = ends_x[it];
+        int ye = ends_y[it];
         int ze = input.depth;
         int w = xy;
         int h = xy;
@@ -56,6 +81,8 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
                 troi.x = 0;
                 troi.y = 0;
                 troi.z = 0;
+                troi.depth = d;
+                troi.xy_dim = w;
 
                 for (size_t zi = zs; zi + d - 1 < ze; zi += step_depth) {
                     for (size_t yi = ys; yi + h -1 < ye; yi += step_size) {
@@ -66,7 +93,7 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
                             for (int i = 0; i < cropped.depth; i++) {
                                 for (int j = 0; j < cropped.height; j++) {
                                     for (int k = 0; k < cropped.width; k++) {
-                                        sum += std::min(1.0, std::max(static_cast<double>(cropped.data[i][j][k]), 0.0));
+                                        sum += static_cast<double>(cropped.data[i][j][k]);
                                     }
                                 }
                             }
@@ -95,10 +122,31 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
     roi.xy_dim = xy;
     roi.depth = depth;
 
+    double hw = xy / 2;
+    double hh = xy / 2;
+    double hd = depth / 2;
+    double dxy = static_cast<double>(xy);
+    double ddp = static_cast<double>(depth);
+    double dd = dxy * dxy + dxy * dxy + ddp * ddp;
+
     for (int i = 0; i < num_threads; i++) {
         ROI troi = rois[i];
-        if (troi.sum > roi.sum) {
-            roi = troi;
+
+        if (troi.sum >= roi.sum) {
+            ImageU16L3D cropped = Crop(input, troi.x, troi.y, troi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+            int cx, cy, cz = 0;
+            int sum = 0;
+            FindCOM(cropped, cx, cy, cz, sum);
+
+            double df = (cx - hw) *  (cx - hw) + (cy - hh) * (cy - hh) + (cz - hd) * (cz - hd);
+                
+            if (df < dd) {
+                roi.sum = troi.sum;
+                roi.x = troi.x;
+                roi.y = troi.y;
+                roi.z = troi.z;
+                dd = df;
+            }
         }
     }
 
@@ -106,29 +154,6 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
 }
 
 
-void FindCOM(ImageU8L3D &input, int &cx, int &cy, int &cz, int &sum) {
-    float dx = 0, dy = 0, dz = 0, tsum = 0;
-
-    for (int z = 0; z < input.depth; z++) {
-        for (int y = 0; y < input.height; y++) {
-            for (int x = 0; x < input.width; x++) {
-                if (input.data[z][y][x] != 0) {
-                    dx += static_cast<float>(x);
-                    dy += static_cast<float>(y);
-                    dz += static_cast<float>(z);
-                    tsum += std::min(1.0f, std::max(static_cast<float>(input.data[z][y][x]), 0.0f));
-                }
-            }
-        }
-    }
-
-    if (tsum > 0) {
-        cx = static_cast<int>(floor(dx / tsum));
-        cy = static_cast<int>(floor(dy / tsum));
-        cz = static_cast<int>(floor(dz / tsum));
-    }
-
-}
 
 ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
     size_t step_size = 2;

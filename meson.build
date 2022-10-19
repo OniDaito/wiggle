@@ -93,6 +93,14 @@ executable('count',
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
+# process
+executable('process',
+          'src/process.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
 
 # db
 executable('db',

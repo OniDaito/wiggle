@@ -341,9 +341,7 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         out_stream << "id,p0x,p0y,p0z,fluor0,back0,mode0,minfluor0,size0,p1x,p1y,p1z,fluor1,back1,mode1,minfluor1,size1,p2x,p2y,p2z,fluor2,back2,mode2,minfluor2,size2,p3x,p3y,p3z,fluor3,back3,mode3,minfluor3,size3,orig" << std::endl;
     }
 
-
     // Find the ROI using the mask - Do this on a smaller version of the image for speed.
-
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
     // that comes later as the mask must match
     // ROI is larger here than final as we need 'rotation' space
@@ -398,7 +396,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         p.z = (p.z - roi.z);
         graph.push_back(p);
     }
-
 
     float rw = static_cast<float>(options.final_width) / static_cast<float>(options.roi_xy);
     float rh = static_cast<float>(options.final_height) / static_cast<float>(options.roi_xy);
