@@ -19,6 +19,7 @@ imagine = dependency('imagine')
 libcee = dependency('cee')
 glfw = dependency('glfw3')
 postgres = dependency('libpqxx')
+eigen = dependency('eigen3')
 
 # The include directories for the dependencies inside this project
 include_dirs = [
@@ -45,6 +46,15 @@ executable('single',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
+          link_with : wiggle,
+          link_args : '-Wl,-lpthread')
+
+# Find the best worm model
+executable('basemodel',
+          'src/basemodel.cpp',
+          install : false,
+          include_directories : include_dirs,
+          dependencies : [libcee, eigen, postgres],
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
