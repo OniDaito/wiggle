@@ -64,7 +64,7 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
     double df = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
 
     double loss = pow(da - ta, 2) + pow(db - tb, 2) + pow(dc - tc, 2) + pow(dd - td, 2) + pow(de - te, 2) + pow(df - tf, 2);
-    std::cout << "Loss: " << loss << std::endl;
+    // std::cout << "Loss: " << loss << std::endl;
     return loss;
 }
 
