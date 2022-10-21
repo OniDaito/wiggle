@@ -242,7 +242,7 @@ int main (int argc, char ** argv) {
 
     
     std::vector<double> xinit = {100, 100, 100, 100, 100, 100};    
-    Neurons positions = solve_posititons(neurons, xinit, 600, 0);
+    Neurons positions = solve_posititons(neurons, xinit, -600, 0);
 
     std::cout << "Positions Found - ASI-1: (" << positions.asi_1.x  << ", " << positions.asi_1.y << ", " << positions.asi_1.z << "), " <<
         "ASI-2: (" << positions.asi_2.x  << ", " << positions.asi_2.y << ", " << positions.asi_2.z << "), " << 
