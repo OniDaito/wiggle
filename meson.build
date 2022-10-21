@@ -19,7 +19,7 @@ imagine = dependency('imagine')
 libcee = dependency('cee')
 glfw = dependency('glfw3')
 postgres = dependency('libpqxx')
-eigen = dependency('eigen3')
+nlopt = dependency('nlopt_cxx')
 
 # The include directories for the dependencies inside this project
 include_dirs = [
@@ -54,7 +54,7 @@ executable('basemodel',
           'src/basemodel.cpp',
           install : false,
           include_directories : include_dirs,
-          dependencies : [libcee, eigen, postgres],
+          dependencies : [libcee, postgres, nlopt],
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
@@ -150,6 +150,12 @@ test_deconv_stack = executable('test_deconv_stack',
   'src/test/deconv_stack.cpp',
   include_directories : include_dirs,
   dependencies : [libcee, imagine],
+  link_with : wiggle)
+
+test_basemodel = executable('test_basemodel',
+  'src/test/basemodel.cpp',
+  include_directories : include_dirs,
+  dependencies : [libcee, postgres, nlopt],
   link_with : wiggle)
 
 test('Basic Test', test_basic)
