@@ -51,6 +51,7 @@ executable('single',
 
 # Find the best worm model
 executable('basemodel',
+          'src/solver.cpp',
           'src/basemodel.cpp',
           install : false,
           include_directories : include_dirs,
@@ -153,6 +154,7 @@ test_deconv_stack = executable('test_deconv_stack',
   link_with : wiggle)
 
 test_basemodel = executable('test_basemodel',
+  'src/solver.cpp',
   'src/test/basemodel.cpp',
   include_directories : include_dirs,
   dependencies : [libcee, postgres, nlopt],

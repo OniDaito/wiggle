@@ -37,7 +37,7 @@ typedef struct {
     glm::vec3 asj_2;
 } Neurons;
 
-Neurons solve_posititons(NeuronDists dists);
+Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_bound, double lower_bound, double term);
 NeuronDists find_averages();
 float median(std::vector<float> &v);
 
