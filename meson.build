@@ -19,7 +19,7 @@ imagine = dependency('imagine')
 libcee = dependency('cee')
 glfw = dependency('glfw3')
 postgres = dependency('libpqxx')
-nlopt = dependency('nlopt_cxx')
+nlopt = dependency('nlopt')
 
 # The include directories for the dependencies inside this project
 include_dirs = [
