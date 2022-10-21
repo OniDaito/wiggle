@@ -77,9 +77,10 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
  * @param x - initial positions
  * @param upper_bound - the upper bound on x
  * @param lower_bound - the lower bound on x
+ * @param term - terminiating loss condition
  * @return Neurons 
  */
-Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_bound, double lower_bound) {
+Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_bound, double lower_bound, double term) {
     // Initial positions we will try to minimise
     Neurons positions = {
         glm::vec3(0, 0, 0),
@@ -97,7 +98,7 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
     opt.set_lower_bounds(lb);
     opt.set_upper_bounds(ub);
     opt.set_min_objective(myfunc, &base);
-    opt.set_stopval(1e-4);
+    opt.set_stopval(term);
 
     // Initial parameters for a, b, c, d, e and f.
     double minf;
@@ -242,7 +243,7 @@ int main (int argc, char ** argv) {
 
     
     std::vector<double> xinit = {50, 50, 50, 50, 50, 50};    
-    Neurons positions = solve_posititons(neurons, xinit, -100, 100);
+    Neurons positions = solve_posititons(neurons, xinit, -100, 100, 0.001);
 
     std::cout << "Positions Found - ASI-1: (" << positions.asi_1.x  << ", " << positions.asi_1.y << ", " << positions.asi_1.z << "), " <<
         "ASI-2: (" << positions.asi_2.x  << ", " << positions.asi_2.y << ", " << positions.asi_2.z << "), " << 
