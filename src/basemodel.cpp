@@ -93,7 +93,6 @@ NeuronDists find_averages() {
     }
 
     // Now we have our positions, lets find the dists.
-
     std::vector<float> asi1_asi2_v;
     std::vector<float> asi1_asj1_v;
     std::vector<float> asi1_asj2_v;
@@ -124,11 +123,53 @@ NeuronDists find_averages() {
     }
 
     dists.asi1_asi2 = median(asi1_asi2_v);
+
+    double sum = std::accumulate(asi1_asi2_v.begin(), asi1_asi2_v.end(), 0.0);
+    double mean = sum / asi1_asi2_v.size();
+    double sq_sum = std::inner_product(asi1_asi2_v.begin(), asi1_asi2_v.end(), asi1_asi2_v.begin(), 0.0);
+    double stdev = std::sqrt(sq_sum / asi1_asi2_v.size() - mean * mean);
+    std::cout << "ASI1 - ASI2 (mean, median, stddev): " << mean << ", " <<  dists.asi1_asi2 << ", " << stdev << std::endl;
+
     dists.asi1_asj1 = median(asi1_asj1_v);
+
+    sum = std::accumulate(asi1_asj1_v.begin(), asi1_asj1_v.end(), 0.0);
+    mean = sum / asi1_asj1_v.size();
+    sq_sum = std::inner_product(asi1_asj1_v.begin(), asi1_asj1_v.end(), asi1_asj1_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asi1_asj1_v.size() - mean * mean);
+    std::cout << "ASI1 - ASJ1 (mean, median, stddev): " << mean << ", " <<  dists.asi1_asj1 << ", " << stdev << std::endl;
+
     dists.asi1_asj2 = median(asi1_asj2_v);
+
+    sum = std::accumulate(asi1_asj2_v.begin(), asi1_asj2_v.end(), 0.0);
+    mean = sum / asi1_asj2_v.size();
+    sq_sum = std::inner_product(asi1_asj2_v.begin(), asi1_asj2_v.end(), asi1_asj2_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asi1_asj2_v.size() - mean * mean);
+    std::cout << "ASI1 - ASJ2 (mean, median, stddev): " << mean << ", " <<  dists.asi1_asj2 << ", " << stdev << std::endl;
+
     dists.asi2_asj2 = median(asi2_asj2_v);
+
+    sum = std::accumulate(asi2_asj2_v.begin(), asi2_asj2_v.end(), 0.0);
+    mean = sum / asi2_asj2_v.size();
+    sq_sum = std::inner_product(asi2_asj2_v.begin(), asi2_asj2_v.end(), asi2_asj2_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asi2_asj2_v.size() - mean * mean);
+    std::cout << "ASI2 - ASJ2 (mean, median, stddev): " << mean << ", " <<  dists.asi2_asj2 << ", " << stdev << std::endl;
+
+
     dists.asi2_asj1 = median(asi2_asj1_v);
+
+    sum = std::accumulate(asi2_asj1_v.begin(), asi2_asj1_v.end(), 0.0);
+    mean = sum / asi2_asj1_v.size();
+    sq_sum = std::inner_product(asi2_asj1_v.begin(), asi2_asj1_v.end(), asi2_asj1_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asi2_asj1_v.size() - mean * mean);
+    std::cout << "ASI2 - ASJ1 (mean, median, stddev): " << mean << ", " <<  dists.asi2_asj1 << ", " << stdev << std::endl;
+
     dists.asj1_asj2 = median(asj1_asj2_v);
+
+    sum = std::accumulate(asj1_asj2_v.begin(), asj1_asj2_v.end(), 0.0);
+    mean = sum / asj1_asj2_v.size();
+    sq_sum = std::inner_product(asj1_asj2_v.begin(), asj1_asj2_v.end(), asj1_asj2_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asj1_asj2_v.size() - mean * mean);
+    std::cout << "ASI2 - ASJ1 (mean, median, stddev): " << mean << ", " <<  dists.asj1_asj2 << ", " << stdev << std::endl;
 
     return dists;
 }

@@ -14,6 +14,8 @@
 #include <libcee/threadpool.hpp>
 #include <iostream>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 #include <getopt.h>
 #include <cstdlib>
 #include <nlopt.hpp>
