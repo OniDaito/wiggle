@@ -41,9 +41,9 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
 
     // Candidate positions of the four neurons
     double pa[3] = {0, 0, 0};
-    double pb[3] = {x[0], 0, 0}; 
-    double pc[3] = {x[1], x[2], 0}; 
-    double pd[3] = {x[3], x[4], x[5]};
+    double pb[3] = {x[0], x[1], x[2]}; 
+    double pc[3] = {x[3], x[4], x[5]}; 
+    double pd[3] = {x[6], x[7], x[8]};
 
     // Candidate 6 distances
     double da = sqrt(pow(pa[0]- pb[0], 2) + pow(pa[1]- pb[1], 2) + pow(pa[2]- pb[2], 2));
@@ -81,10 +81,10 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
 
     my_base_data base = {dists.asi1_asi2, dists.asi1_asj1, dists.asi1_asj2, dists.asi2_asj2, dists.asi2_asj1, dists.asj1_asj2};
 
-    nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 6);
+    nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 9);
     // Lower and upper bounds
-    std::vector<double> lb = {upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound};
-    std::vector<double> ub = {lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound};
+    std::vector<double> lb = {upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound};
+    std::vector<double> ub = {lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound};
     opt.set_lower_bounds(lb);
     opt.set_upper_bounds(ub);
     opt.set_min_objective(myfunc, &base);
@@ -95,17 +95,20 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
 
     try{
         nlopt::result result = opt.optimize(x, minf);
-        std::cout << "found minimum at f(" << x[0] << "," << x[1] << "," << x[2] << ","  << x[3] << ","  << x[4] << ","  << x[5] << ") = "
+        std::cout << "found minimum at f(" << x[0] << "," << x[1] << "," << x[2] << ","  << x[3] << ","  << x[4] << ","  << x[5]  << ","  << x[6]  << ","  << x[7]  << ","  << x[8] << ") = "
             << std::setprecision(10) << minf << std::endl;
 
         positions.asi_2.x = x[0];
+        positions.asi_2.y = x[1];
+        positions.asi_2.z = x[2];
 
-        positions.asj_1.x = x[1];
-        positions.asj_1.y = x[2];
-     
-        positions.asj_2.x = x[3];
-        positions.asj_2.y = x[4];
-        positions.asj_2.z = x[5];
+        positions.asj_1.x = x[3];
+        positions.asj_1.y = x[4];
+        positions.asj_1.z = x[5];
+
+        positions.asj_2.x = x[6];
+        positions.asj_2.y = x[7];
+        positions.asj_2.z = x[8];
     
     }
     catch(std::exception &e) {
