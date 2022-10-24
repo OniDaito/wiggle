@@ -155,4 +155,10 @@ int main (int argc, char ** argv) {
         "ASI-2: (" << positions.asi_2.x  << ", " << positions.asi_2.y << ", " << positions.asi_2.z << "), " << 
         "ASJ-1: (" << positions.asj_1.x  << ", " << positions.asj_1.y << ", " << positions.asj_1.z << "), " <<
         "ASI-2: (" << positions.asj_2.x  << ", " << positions.asj_2.y << ", " << positions.asj_2.z << ") " << std::endl;
+
+    
+     std::cout << "Positions Found  with non scaled 200px image in a 2 x 2 x 2 world - ASI-1: (" << positions.asi_1.x / 200.0 * 2.0  << ", " << positions.asi_1.y / 200.0 * 2.0 << ", " << positions.asi_1.z / 200.0 * 2.0<< "), " <<
+        "ASI-2: (" << positions.asi_2.x / 200.0 * 2.0  << ", " << positions.asi_2.y / 200.0 * 2.0 << ", " << positions.asi_2.z / 200.0 * 2.0 << "), " << 
+        "ASJ-1: (" << positions.asj_1.x / 200.0 * 2.0 << ", " << positions.asj_1.y / 200.0 * 2.0 << ", " << positions.asj_1.z / 200.0 * 2.0 << "), " <<
+        "ASI-2: (" << positions.asj_2.x / 200.0 * 2.0 << ", " << positions.asj_2.y / 200.0 * 2.0 << ", " << positions.asj_2.z / 200.0 * 2.0 << ") " << std::endl;
 }
