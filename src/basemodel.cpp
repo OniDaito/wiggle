@@ -154,5 +154,5 @@ int main (int argc, char ** argv) {
     std::cout << "Positions Found - ASI-1: (" << positions.asi_1.x  << ", " << positions.asi_1.y << ", " << positions.asi_1.z << "), " <<
         "ASI-2: (" << positions.asi_2.x  << ", " << positions.asi_2.y << ", " << positions.asi_2.z << "), " << 
         "ASJ-1: (" << positions.asj_1.x  << ", " << positions.asj_1.y << ", " << positions.asj_1.z << "), " <<
-        "ASI-2: (" << positions.asi_2.x  << ", " << positions.asi_2.y << ", " << positions.asi_2.z << ") " << std::endl;
+        "ASI-2: (" << positions.asj_2.x  << ", " << positions.asj_2.y << ", " << positions.asj_2.z << ") " << std::endl;
 }
