@@ -25,6 +25,8 @@
  
 using namespace pqxx;
 
+float Z_SCALE = 6.2;
+
 // Our command line options, held in a struct.
 typedef struct {
     std::string image_path = ".";
@@ -61,7 +63,7 @@ NeuronDists find_averages() {
             result R( N.exec( sql ));
 
             for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-                glm::vec3 pos (c[4].as<float>(), c[5].as<float>(), c[6].as<float>());
+                glm::vec3 pos (c[4].as<float>(), c[5].as<float>(), c[6].as<float>() * Z_SCALE);
 
                 switch(c[12].as<int>()) {
                     case 1: {
