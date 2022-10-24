@@ -148,7 +148,7 @@ int main (int argc, char ** argv) {
         neurons_dists.asi1_asj2 << ", " << neurons_dists.asi2_asj2 << ", " << 
         neurons_dists.asi2_asj1 << ", " << neurons_dists.asj1_asj2 << std::endl;
 
-    std::vector<double> xinit = {1, 60, 1, 60, 1, -1, 60, 60, -1};    
+    std::vector<double> xinit = {1, -60, 1, -60, 1, -1, -60, -60, -1};    
     Neurons positions = solve_posititons(neurons_dists, xinit, -600, 600, 0.0001);
 
     std::cout << "Positions Found - ASI-1: (" << positions.asi_1.x  << ", " << positions.asi_1.y << ", " << positions.asi_1.z << "), " <<

@@ -79,6 +79,7 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
         glm::vec3(0, 0, 0)
     };
 
+    // We are using 9 parameters. We could use 6, with x, xy, and xyz for the last 3 neurons but for now, sticking with 9.
     my_base_data base = {dists.asi1_asi2, dists.asi1_asj1, dists.asi1_asj2, dists.asi2_asj2, dists.asi2_asj1, dists.asj1_asj2};
 
     nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 9);
@@ -90,7 +91,6 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
     opt.set_min_objective(myfunc, &base);
     opt.set_stopval(term);
 
-    // Initial parameters for a, b, c, d, e and f.
     double minf;
 
     try{
