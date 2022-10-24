@@ -109,16 +109,16 @@ NeuronDists find_averages() {
         float asi1_asj1 = glm::distance(asi1, asj1);
         float asi1_asj2 = glm::distance(asi1, asj2);
         float asi2_asj2 = glm::distance(asi2, asj2);
-        float asi2_asj1 = glm::distance(asi2, asj2);
-        float asj2_asj2 = glm::distance(asj2, asi2);
+        float asi2_asj1 = glm::distance(asi2, asj1);
+        float asj1_asj2 = glm::distance(asj1, asj2);
 
         // We don't want zeros as that indicates there was no neuron found
         if (glm::length(asi1) > 0 && glm::length(asi2) > 0) { asi1_asi2_v.push_back(asi1_asi2); }
         if (glm::length(asi1) > 0 && glm::length(asj1) > 0) { asi1_asj1_v.push_back(asi1_asj1); }
         if (glm::length(asi1) > 0 && glm::length(asj2) > 0) { asi1_asj2_v.push_back(asi1_asj2); }
         if (glm::length(asi2) > 0 && glm::length(asj2) > 0) { asi2_asj2_v.push_back(asi2_asj2); }
-        if (glm::length(asi2) > 0 && glm::length(asj1) > 0) { asi2_asj1_v.push_back(asi2_asj2); }
-        if (glm::length(asj2) > 0 && glm::length(asj2) > 0) { asj1_asj2_v.push_back(asi2_asj2); }
+        if (glm::length(asi2) > 0 && glm::length(asj1) > 0) { asi2_asj1_v.push_back(asi2_asj1); }
+        if (glm::length(asj2) > 0 && glm::length(asj2) > 0) { asj1_asj2_v.push_back(asj1_asj2); }
     }
 
     dists.asi1_asi2 = median(asi1_asi2_v);
