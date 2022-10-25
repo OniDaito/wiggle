@@ -154,7 +154,6 @@ NeuronDists find_averages() {
     stdev = std::sqrt(sq_sum / asi2_asj2_v.size() - mean * mean);
     std::cout << "ASI2 - ASJ2 (mean, median, stddev): " << mean << ", " <<  dists.asi2_asj2 << ", " << stdev << std::endl;
 
-
     dists.asi2_asj1 = median(asi2_asj1_v);
 
     sum = std::accumulate(asi2_asj1_v.begin(), asi2_asj1_v.end(), 0.0);
@@ -169,7 +168,7 @@ NeuronDists find_averages() {
     mean = sum / asj1_asj2_v.size();
     sq_sum = std::inner_product(asj1_asj2_v.begin(), asj1_asj2_v.end(), asj1_asj2_v.begin(), 0.0);
     stdev = std::sqrt(sq_sum / asj1_asj2_v.size() - mean * mean);
-    std::cout << "ASI2 - ASJ1 (mean, median, stddev): " << mean << ", " <<  dists.asj1_asj2 << ", " << stdev << std::endl;
+    std::cout << "ASJ1 - ASJ2 (mean, median, stddev): " << mean << ", " <<  dists.asj1_asj2 << ", " << stdev << std::endl;
 
     return dists;
 }

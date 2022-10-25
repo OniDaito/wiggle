@@ -52,6 +52,7 @@ typedef struct {
     int final_depth = 51;             // number of z-slices - TODO - should be set automatically along with width and height
     int final_width = 200;            // The input dimensions of each slice
     int final_height = 200;
+    int deconv_rounds = 5; 
     size_t roi_xy = 200;           // Square across this dimension
     size_t roi_depth = 21;         // Multiplied by the depth scale later
     uint16_t cutoff = 270;
@@ -74,7 +75,7 @@ std::vector<glm::quat> ROTS;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, float noise, bool deconv, const std::string &psf_path) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds) {
     ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
 
     // Convert to float as we need to do some operations
@@ -163,7 +164,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, f
         // Deconvolve with a known PSF
         std::string path_kernel(psf_path);
         ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
-        ImageF32L3D deconved = DeconvolveFFT(converted, kernel, 5);
+        ImageF32L3D deconved = DeconvolveFFT(converted, kernel, deconv_rounds);
         
         return deconved;
     }
@@ -210,7 +211,7 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path);
+    ImageF32L3D processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
   
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
@@ -470,7 +471,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmun:z:w:h:l:c:s:j:q:k:g:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmun:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -541,6 +542,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'g':
                 RANDROT_GENERATOR.seed(libcee::FromString<int>(optarg));
+                break;
+            case 'e':
+                options.deconv_rounds = libcee::FromString<int>(optarg);
                 break;
             case 1 :
                 options.interz = false;
