@@ -216,10 +216,11 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
     ImageF32L3D processed(stacked.width, stacked.height, stacked.depth);
     
     if (options.otsu){
-        ImageU16L3D threshed(stacked);
-        auto thresh = imagine::Otsu(stacked);
+        ImageU16L3D prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+        ImageU16L3D threshed(prefinal);
+        auto thresh = imagine::Otsu(prefinal);
         std::function<uint16_t (uint16_t)> thresh_func = [thresh](uint16_t x) { if(x >= thresh) { return x;} return static_cast<uint16_t>(0); };
-        threshed = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
+        threshed = ApplyFunc<ImageU16L3D, uint16_t>(prefinal, thresh_func);
         processed = imagine::Convert<ImageF32L3D>(threshed);
 
     } else {
