@@ -43,6 +43,7 @@ typedef struct {
     int offset_number = 0;
     bool subpixel = true;
     bool interz = true;
+    bool otsu = false;
     bool bottom = false;
     bool autoback = false;      // Automatic background detection
     bool deconv = false;         // Do we deconvolve and all that?
@@ -211,8 +212,21 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
   
+    ImageF32L3D processed(stacked.width, stacked.height, stacked.depth);
+    
+    if (options.otsu){
+        ImageU16L3D threshed(stacked);
+        auto thresh = imagine::Otsu(stacked);
+        std::function<uint16_t (uint16_t)> thresh_func = [thresh](uint16_t x) { if(x >= thresh) { return x;} return static_cast<uint16_t>(0); };
+        threshed = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
+        processed = imagine::Convert<ImageF32L3D>(threshed);
+
+    } else {
+        processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
+    }
+  
+
     // Now perform some rotations, sum, normalise, contrast then renormalise for the final 2D image
     // Thread this bit for a bit more speed
     libcee::ThreadPool pool{ static_cast<size_t>( options.num_augs) };
@@ -471,7 +485,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmun:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -511,6 +525,9 @@ int main (int argc, char ** argv) {
                 break;
             case 't' :
                 options.threeclass = true;
+                break;
+            case 'v' :
+                options.otsu = true;
                 break;
             case 'n':
                 options.offset_number = libcee::FromString<int>(optarg);
