@@ -216,6 +216,7 @@ bool TiffToFits(const Options &options, std::string &tiff_path, int image_idx, R
     ImageF32L3D processed(stacked.width, stacked.height, stacked.depth);
     
     if (options.otsu){
+        std::cout << "Otsu thresholding" << std::endl;
         ImageU16L3D prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
         ImageU16L3D threshed(prefinal);
         auto thresh = imagine::Otsu(prefinal);
