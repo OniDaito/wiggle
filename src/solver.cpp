@@ -22,7 +22,7 @@
 #include "basemodel.hpp"
 
 typedef struct {
-    double a, b, c, d, e, f;
+    double a, b, c, d;
 } my_base_data;
 
 
@@ -39,15 +39,15 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
 
     // Candidate positions of the four neurons
     double pa[3] = {0, 0, 0};
-    double pb[3] = {x[0], x[1], x[2]}; 
-    double pc[3] = {x[3], x[4], x[5]}; 
-    double pd[3] = {x[6], x[7], x[8]};
+    double pb[3] = {x[0], 0 , 0}; 
+    double pc[3] = {x[1], x[2], 0}; 
+    double pd[3] = {x[3], x[4], x[5]};
 
     // Candidate 6 distances
     double da = sqrt(pow(pa[0]- pb[0], 2) + pow(pa[1]- pb[1], 2) + pow(pa[2]- pb[2], 2));
     double db = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
-    double dc = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2)) +  sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
-    double dd = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2)) +  sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
+    double dc = sqrt(pow(pa[0]- pc[0], 2) + pow(pa[1]- pc[1], 2) + pow(pa[2]- pc[2], 2)) + sqrt(pow(pa[0]- pd[0], 2) + pow(pa[1]- pd[1], 2) + pow(pa[2]- pd[2], 2));
+    double dd = sqrt(pow(pb[0]- pc[0], 2) + pow(pb[1]- pc[1], 2) + pow(pb[2]- pc[2], 2)) + sqrt(pow(pb[0]- pd[0], 2) + pow(pb[1]- pd[1], 2) + pow(pb[2]- pd[2], 2));
 
     double loss = pow(da - ta, 2) + pow(db - tb, 2) + pow(dc - tc, 2) + pow(dd - td, 2);
     //std::cout << "Loss: " << loss << std::endl;
@@ -76,12 +76,12 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
     };
 
     // We are using 9 parameters. We could use 6, with x, xy, and xyz for the last 3 neurons but for now, sticking with 9.
-    my_base_data base = {dists.asi1_asi2, dists.asj1_asj2, dists.asi1_asj12, dists.asj1_asi12};
+    my_base_data base = {dists.asi1_asi2, dists.asj1_asj2, dists.asi1_asj12, dists.asi2_asj12};
 
-    nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 9);
+    nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 6);
     // Lower and upper bounds
-    std::vector<double> lb = {upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound};
-    std::vector<double> ub = {lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound};
+    std::vector<double> lb = {upper_bound, upper_bound, upper_bound, upper_bound, upper_bound, upper_bound};
+    std::vector<double> ub = {lower_bound, lower_bound, lower_bound, lower_bound, lower_bound, lower_bound};
     opt.set_lower_bounds(lb);
     opt.set_upper_bounds(ub);
     opt.set_min_objective(myfunc, &base);
@@ -91,20 +91,17 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
 
     try{
         nlopt::result result = opt.optimize(x, minf);
-        std::cout << "found minimum at f(" << x[0] << "," << x[1] << "," << x[2] << ","  << x[3] << ","  << x[4] << ","  << x[5]  << ","  << x[6]  << ","  << x[7]  << ","  << x[8] << ") = "
+        std::cout << "found minimum at f(" << x[0] << "," << x[1] << "," << x[2] << ","  << x[3] << ","  << x[4] << ","  << x[5] << ") = "
             << std::setprecision(10) << minf << std::endl;
 
         positions.asi_2.x = x[0];
-        positions.asi_2.y = x[1];
-        positions.asi_2.z = x[2];
-
-        positions.asj_1.x = x[3];
-        positions.asj_1.y = x[4];
-        positions.asj_1.z = x[5];
-
-        positions.asj_2.x = x[6];
-        positions.asj_2.y = x[7];
-        positions.asj_2.z = x[8];
+ 
+        positions.asj_1.x = x[1];
+        positions.asj_1.y = x[2];
+ 
+        positions.asj_2.x = x[3];
+        positions.asj_2.y = x[4];
+        positions.asj_2.z = x[5];
     
     }
     catch(std::exception &e) {

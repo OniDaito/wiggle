@@ -54,7 +54,7 @@ NeuronDists find_averages() {
     std::vector<glm::vec3> asj_1_positions;
     std::vector<glm::vec3> asj_2_positions;
 
-    NeuronDists dists = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    NeuronDists dists = { 0.0f, 0.0f, 0.0f, 0.0f};
 
     try {
         connection C("dbname = phd user = postgres hostaddr = 127.0.0.1 port = 5432");
@@ -98,7 +98,7 @@ NeuronDists find_averages() {
     // Now we have our positions, lets find the dists.
     std::vector<float> asi1_asi2_v;
     std::vector<float> asi1_asj12_v;
-    std::vector<float> asj1_asi12_v;
+    std::vector<float> asi2_asj12_v;
     std::vector<float> asj1_asj2_v;
 
     for (size_t i = 0; i < asi_1_positions.size(); i++) {
@@ -122,14 +122,14 @@ NeuronDists find_averages() {
 
             // Two lenghs that are combos of the diagonals and sides
             asi1_asj12_v.push_back(asi1_asj1 + asi1_asj2);
-            asj1_asi12_v.push_back(asi2_asj2 + asi2_asj1);
+            asi2_asj12_v.push_back(asi2_asj1 + asi2_asj2);
         }
     }
 
     dists.asi1_asi2 = median(asi1_asi2_v);
     dists.asj1_asj2 = median(asj1_asj2_v);
-    dists.asi1_asj12 = median(asj1_asi12_v);
-    dists.asj1_asi12 = median(asj1_asi12_v);
+    dists.asi1_asj12 = median(asi1_asj12_v);
+    dists.asi2_asj12 = median(asi2_asj12_v);
 
     double sum = std::accumulate(asi1_asi2_v.begin(), asi1_asi2_v.end(), 0.0);
     double mean = sum / asi1_asi2_v.size();
@@ -149,11 +149,11 @@ NeuronDists find_averages() {
     stdev = std::sqrt(sq_sum / asi1_asj12_v.size() - mean * mean);
     std::cout << "ASI1 - ASJ1-2 (mean, median, stddev): " << mean << ", " <<  dists.asi1_asj12 << ", " << stdev << std::endl;
 
-    sum = std::accumulate(asj1_asi12_v.begin(), asj1_asi12_v.end(), 0.0);
-    mean = sum / asj1_asi12_v.size();
-    sq_sum = std::inner_product(asj1_asi12_v.begin(), asj1_asi12_v.end(), asj1_asi12_v.begin(), 0.0);
-    stdev = std::sqrt(sq_sum / asj1_asi12_v.size() - mean * mean);
-    std::cout << "ASJ1 - ASI1-2 (mean, median, stddev): " << mean << ", " <<  dists.asj1_asi12 << ", " << stdev << std::endl;
+    sum = std::accumulate(asi2_asj12_v.begin(), asi2_asj12_v.end(), 0.0);
+    mean = sum / asi2_asj12_v.size();
+    sq_sum = std::inner_product(asi2_asj12_v.begin(), asi2_asj12_v.end(), asi2_asj12_v.begin(), 0.0);
+    stdev = std::sqrt(sq_sum / asi2_asj12_v.size() - mean * mean);
+    std::cout << "ASJ1 - ASI1-2 (mean, median, stddev): " << mean << ", " <<  dists.asi2_asj12 << ", " << stdev << std::endl;
 
     return dists;
 }
@@ -172,7 +172,7 @@ int main (int argc, char ** argv) {
     NeuronDists neurons_dists = find_averages();
 
     std::cout << "Average distances (median): " << neurons_dists.asi1_asi2 << ", " << neurons_dists.asj1_asj2 << ", " <<
-        neurons_dists.asi1_asj12 << ", " << neurons_dists.asj1_asi12 << ", " << std::endl;
+        neurons_dists.asi1_asj12 << ", " << neurons_dists.asi2_asj12 << ", " << std::endl;
 
     std::vector<double> xinit = {1, -60, 1, -60, 1, -1, -60, -60, -1};    
     Neurons positions = solve_posititons(neurons_dists, xinit, -600, 600, 0.0001);
