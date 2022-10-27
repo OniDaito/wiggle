@@ -25,11 +25,9 @@
 
 typedef struct {
     float asi1_asi2;
-    float asi1_asj1;
-    float asi1_asj2;
-    float asi2_asj2;
-    float asi2_asj1;
     float asj1_asj2;
+    float asi1_asj12;
+    float asj1_asi12;
 } NeuronDists;
 
 typedef struct {

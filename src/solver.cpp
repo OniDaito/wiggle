@@ -36,8 +36,6 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
     double tb = base->b;
     double tc = base->c;
     double td = base->d;
-    double te = base->e;
-    double tf = base->f;
 
     // Candidate positions of the four neurons
     double pa[3] = {0, 0, 0};
@@ -47,13 +45,11 @@ double myfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_
 
     // Candidate 6 distances
     double da = sqrt(pow(pa[0]- pb[0], 2) + pow(pa[1]- pb[1], 2) + pow(pa[2]- pb[2], 2));
-    double db = sqrt(pow(pa[0]- pc[0], 2) + pow(pa[1]- pc[1], 2) + pow(pa[2]- pc[2], 2));
-    double dc = sqrt(pow(pa[0]- pd[0], 2) + pow(pa[1]- pd[1], 2) + pow(pa[2]- pd[2], 2));
-    double dd = sqrt(pow(pb[0]- pd[0], 2) + pow(pb[1]- pd[1], 2) + pow(pb[2]- pd[2], 2));
-    double de = sqrt(pow(pb[0]- pc[0], 2) + pow(pb[1]- pc[1], 2) + pow(pb[2]- pc[2], 2));
-    double df = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
+    double db = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
+    double dc = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2)) +  sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
+    double dd = sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2)) +  sqrt(pow(pc[0]- pd[0], 2) + pow(pc[1]- pd[1], 2) + pow(pc[2]- pd[2], 2));
 
-    double loss = pow(da - ta, 2) + pow(db - tb, 2) + pow(dc - tc, 2) + pow(dd - td, 2) + pow(de - te, 2) + pow(df - tf, 2);
+    double loss = pow(da - ta, 2) + pow(db - tb, 2) + pow(dc - tc, 2) + pow(dd - td, 2);
     //std::cout << "Loss: " << loss << std::endl;
     return loss;
 }
@@ -80,7 +76,7 @@ Neurons solve_posititons(NeuronDists dists, std::vector<double> x, double upper_
     };
 
     // We are using 9 parameters. We could use 6, with x, xy, and xyz for the last 3 neurons but for now, sticking with 9.
-    my_base_data base = {dists.asi1_asi2, dists.asi1_asj1, dists.asi1_asj2, dists.asi2_asj2, dists.asi2_asj1, dists.asj1_asj2};
+    my_base_data base = {dists.asi1_asi2, dists.asj1_asj2, dists.asi1_asj12, dists.asj1_asi12};
 
     nlopt::opt opt(nlopt::GN_DIRECT_L_RAND, 9);
     // Lower and upper bounds
