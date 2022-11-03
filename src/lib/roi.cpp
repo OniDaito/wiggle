@@ -154,7 +154,6 @@ ROI FindROI(ImageU16L3D &input, size_t xy, size_t depth) {
 }
 
 
-
 ROI FindROI(ImageU8L3D &input, size_t xy, size_t depth) {
     size_t step_size = 2;
     size_t step_depth = 1; 

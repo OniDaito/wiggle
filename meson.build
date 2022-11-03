@@ -34,6 +34,7 @@ wiggle = library('wiggle', sources : [
   'src/lib/data.cpp',
   'src/lib/roi.cpp',
   'src/lib/rots.cpp',
+  'src/lib/pipe.cpp',
   ],
   dependencies : [libcee, imagine, glfw],
   include_directories : include_dirs,
@@ -59,36 +60,9 @@ executable('basemodel',
           link_with : wiggle,
           link_args : '-Wl,-lpthread')
 
-# Graph
-executable('graph',
-          'src/graph.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libcee, imagine],
-          link_with : wiggle,
-          link_args : '-Wl,-lpthread')
-
-# three
-executable('three',
-          'src/three.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libcee, imagine],
-          link_with : wiggle,
-          link_args : '-Wl,-lpthread')
-
-# noaug
-executable('noaug',
-          'src/noaug.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libcee, imagine],
-          link_with : wiggle,
-          link_args : '-Wl,-lpthread')
-
-# stack
-executable('stack',
-          'src/stack.cpp',
+# Wiggle
+executable('wiggle',
+          'src/wiggle.cpp',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine],
@@ -98,15 +72,6 @@ executable('stack',
 # count
 executable('count',
           'src/count.cpp',
-          install : false,
-          include_directories : include_dirs,
-          dependencies : [libcee, imagine],
-          link_with : wiggle,
-          link_args : '-Wl,-lpthread')
-
-# process
-executable('process',
-          'src/process.cpp',
           install : false,
           include_directories : include_dirs,
           dependencies : [libcee, imagine],

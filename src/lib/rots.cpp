@@ -34,3 +34,41 @@ glm::quat RandRot() {
     return q;
 }
 
+
+// Returns the graph but in augmented co-ordinates to match the images
+
+void AugmentGraph(std::vector<glm::vec4> const &graph, std::vector<glm::vec4> &rgraph, glm::quat rot, size_t image_dim, size_t final_dim, float zscale) {
+    assert(graph.size() == 4);
+    assert(rgraph.size() == 0);
+
+    for (int i = 0; i < 4; i++) {
+        float fz = static_cast <float>(graph[i].z * zscale);
+        float fx = static_cast <float>(graph[i].x);
+        float fy = static_cast <float>(graph[i].y);
+
+        fx = (fx / static_cast <float>(image_dim) * 2.0) - 1.0;
+        fy = (fy / static_cast <float>(image_dim) * 2.0) - 1.0;
+        fz = (fz / static_cast <float>(image_dim) * 2.0) - 1.0;
+
+        glm::mat4 rotmat = glm::toMat4(rot);
+        glm::vec4 v = glm::vec4(fx, fy, fz, 1.0);
+        v = rotmat * v;
+
+        glm::vec4 tg ( static_cast<float>((v.x + 1.0) / 2.0 * image_dim),
+            static_cast<float>((v.y + 1.0) / 2.0 * image_dim),
+           static_cast<float>( (v.z + 1.0) / 2.0 * image_dim), 1.0f);
+
+        // Augmenting cuts down the input image a bit so we must adjust 
+        // ROI accordingly
+        float roi_shift = ( image_dim - final_dim ) / 2.0f;
+  
+        tg.x = tg.x - roi_shift;
+        tg.y = tg.y - roi_shift;
+        tg.z = tg.z - roi_shift;
+
+        rgraph.push_back(tg);
+
+        // Note we don't undo Zscale, as augimage above does not flatten the Z back down either.
+    }
+
+}
