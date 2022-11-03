@@ -56,7 +56,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -81,9 +81,6 @@ int main (int argc, char ** argv) {
                 break;
             case 'u' :
                 options.autoback = true;
-                break;
-            case 'b':
-                options.bottom = true;
                 break;
             case 'd':
                 options.deconv = true;

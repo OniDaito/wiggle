@@ -4,11 +4,16 @@
  * █▄▀░▀▄██░▄█░█▄▀█░█▄▀█░██░▄▄
  * ██▄█▄██▄▄▄█▄▄▄▄█▄▄▄▄█▄▄█▄▄▄
  * ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
- * @file single.cc
+ * @file single.cpp
  * @author Benjamin Blundell - k1803390@kcl.ac.uk
  * @date 24/02/2022
  * @brief Process a single pair of images.
  * 
+ * Basic Usage - provide paths to the original tiff, the log file and the watershedded image from the annotation directory
+ * 
+ * ./build/single -i /media/proto_backup/wormz/queelim/ins-6-mCherry/20170804-QL604_SB3-d1.0/QL604_SB3-d1.0xAutoStack24.tiff \
+ *  -a /media/proto_backup/wormz/queelim/ins-6-mCherry/Annotation/20170804-QL604_SB3-d1.0/ID24_2.log \
+ *  -r /media/proto_backup/wormz/queelim/ins-6-mCherry/Annotation/20170804-QL604_SB3-d1.0/ID24_WS2.tiff
  *
  */
 
@@ -30,6 +35,8 @@ int main (int argc, char ** argv) {
     static struct option long_options[] = {
         {"no-interz", no_argument, NULL, 1},
         {"no-subpixel", no_argument, NULL, 2},
+        {"no-roi", no_argument, NULL, 3},
+        {"no-process", no_argument, NULL, 4},
         {NULL, 0, NULL, 0}
     };
 
@@ -38,7 +45,7 @@ int main (int argc, char ** argv) {
 
     std::string watershed_path, annotation_path, image_path;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdbmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:r:tfdmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -58,13 +65,10 @@ int main (int argc, char ** argv) {
                 options.prefix = std::string(optarg);
                 break;
             case 'r' :
-                watershed_path = true;
+                watershed_path = std::string(optarg);
                 break;
             case 'u' :
                 options.autoback = true;
-                break;
-            case 'b':
-                options.bottom = true;
                 break;
             case 'd':
                 options.deconv = true;
@@ -121,12 +125,20 @@ int main (int argc, char ** argv) {
             case 2 :
                 options.subpixel = false;
                 break;
+            case 3 :
+                options.noroi = true;
+                break;
+            case 4 :
+                options.noprocess = true;
+                break;
         }
     }
 
     ROI roi;
     std::vector<glm::quat> ROTS;
     std::string coord_path = "";
+
+    std::cout << "Processing: " << image_path << " with " << watershed_path << " and " << annotation_path << std::endl;
     
     if (options.num_augs > 1) {
         ProcessMask(options, watershed_path, annotation_path, coord_path, ROTS, 0, roi);

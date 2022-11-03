@@ -28,11 +28,9 @@ using namespace imagine;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds) {
-    ImageU16L3D prefinal = Crop(image_in, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
-
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds) {
     // Convert to float as we need to do some operations
-    ImageF32L3D converted = Convert<ImageF32L3D>(prefinal);
+    ImageF32L3D converted = Convert<ImageF32L3D>(image_in);
 
     if (autoback){
         // Perform an automatic background subtraction based on local means
@@ -110,14 +108,25 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  ROI &roi, bool autoback, f
 
     // Perform a subtraction on the images, removing background
     if (deconv){ 
-        // Contrast
-        //std::function<float(float)> log_func = [](float x) { return std::max(10.0f * log2(x), 0.0f); };
-        //converted = ApplyFunc<ImageF32L3D, float>(converted, log_func);
+        // Drop the last layer if the image has an odd depth
+        bool dropped = false;
+        std::vector<std::vector<float>> last_slice(converted.data[converted.depth-1]);
+
+        if (converted.depth % 2 == 1) {
+            converted.data.pop_back();
+            converted.depth -= 1;
+            dropped == true;
+        }
 
         // Deconvolve with a known PSF
         std::string path_kernel(psf_path);
         ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
         ImageF32L3D deconved = DeconvolveFFT(converted, kernel, deconv_rounds);
+
+        if (dropped) {
+            converted.data.push_back(last_slice);
+            converted.depth += 1;
+        }
         
         return deconved;
     }
@@ -170,7 +179,7 @@ void _NoAugSource(const Options &options, ImageF32L3D processed, std::string ima
             ImageF32L3D resized = Resize(processed, options.final_width, options.final_height, options.final_depth);
             SaveFITS(output_path, resized);
         } else {
-             SaveFITS(output_path, processed);   
+            SaveFITS(output_path, processed);   
         }
     }
 }
@@ -278,24 +287,30 @@ void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std:
         std::cout << "Renaming " << tiff_path << " to " << output_path << std::endl;
     }
 
-    ImageF32L3D processed(stacked.width, stacked.height, stacked.depth);
-    
-    if (options.otsu){
-        ImageU16L3D prefinal = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
-        ImageU16L3D threshed(prefinal);
-        auto thresh = imagine::Otsu(prefinal);
-        std::function<uint16_t (uint16_t)> thresh_func = [thresh](uint16_t x) { if(x >= thresh) { return x;} return static_cast<uint16_t>(0); };
-        threshed = ApplyFunc<ImageU16L3D, uint16_t>(prefinal, thresh_func);
-        processed = imagine::Convert<ImageF32L3D>(threshed);
+    ImageF32L3D converted;
 
-    } else {
-        processed = ProcessPipe(stacked, roi, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
+    if (!options.noroi) {
+        stacked = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    }
+
+    if (!options.noprocess){
+        if (options.otsu){
+            auto thresh = imagine::Otsu(stacked);
+            std::function<uint16_t (uint16_t)> thresh_func = [thresh](uint16_t x) { if(x >= thresh) { return x;} return static_cast<uint16_t>(0); };
+            stacked = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
+            converted = imagine::Convert<ImageF32L3D>(stacked);
+
+        } else {
+            converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
+        }
+    } else  {
+        converted = imagine::Convert<ImageF32L3D>(stacked);
     }
 
     if (options.num_augs > 1) {
-        _AugSource(options, processed, ROTS, image_id);
+        _AugSource(options, converted, ROTS, image_id);
     } else {
-        _NoAugSource(options, processed, image_id);
+        _NoAugSource(options, converted, image_id);
     }
 }
 
@@ -415,22 +430,27 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
     // that comes later as the mask must match
     // ROI is larger here than final as we need 'rotation' space
-    float half_roi = static_cast<float>(options.roi_xy) / 2.0;
-    int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
-    int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
 
-    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ImageU8L3D smaller = Resize(neuron_mask, neuron_mask.width / 2, neuron_mask.height / 2, neuron_mask.depth / 2);
-    ROI roi_found = FindROI(smaller, d / 2, depth / 2);
-    roi.x = roi_found.x * 2;
-    roi.y = roi_found.y * 2;
-    roi.z = roi_found.z * 2; 
-    roi.xy_dim = roi_found.xy_dim * 2;
-    roi.depth = roi_found.depth * 2;
+    if (!options.noroi) {
+        float half_roi = static_cast<float>(options.roi_xy) / 2.0;
+        int d = static_cast<int>(ceil(sqrt(2.0f * half_roi * half_roi))) * 2;
+        int depth = static_cast<int>(ceil(static_cast<float>(d) / options.depth_scale));
 
-    std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
-    ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+        // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+        ImageU8L3D smaller = Resize(neuron_mask, neuron_mask.width / 2, neuron_mask.height / 2, neuron_mask.depth / 2);
+        ROI roi_found = FindROI(smaller, d / 2, depth / 2);
+        roi.x = roi_found.x * 2;
+        roi.y = roi_found.y * 2;
+        roi.z = roi_found.z * 2; 
+        roi.xy_dim = roi_found.xy_dim * 2;
+        roi.depth = roi_found.depth * 2;
 
+        std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
+        neuron_mask = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
+    } else {
+        ASSERT(false, "Must have ROI cropping when using augmentation.");
+    }
+  
     std::vector<glm::vec4> graph;
     std::vector<std::string> extra_data;
     bool graphaug = _ReadGraph(coord_path, graph, extra_data, roi);
@@ -453,13 +473,13 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
         std::string aug_id  = libcee::IntToStringLeadingZeroes(i, 2);
         std::string csv_line =  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + ", ";
         std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
-        ImageU8L3D prefinal = Augment(cropped, ROTS[i], options.roi_xy, options.depth_scale, false, false);
+        ImageU8L3D prefinal = Augment(neuron_mask, ROTS[i], options.roi_xy, options.depth_scale, false, false);
         ImageU8L mipped = Project(prefinal, ProjectionType::MAX_INTENSITY);
 
         std::vector<glm::vec4> tgraph;
         // Not sure why the inverse. GLM versus our sampling I suppose
         if (graphaug) {
-            AugmentGraph(graph, tgraph, glm::inverse(ROTS[i]), cropped.width, options.roi_xy, options.depth_scale);
+            AugmentGraph(graph, tgraph, glm::inverse(ROTS[i]), neuron_mask.width, options.roi_xy, options.depth_scale);
         }
 
         ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
@@ -539,11 +559,6 @@ bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log
     // Join all our neurons
     ImageU8L3D neuron_mask(image_in.width, image_in.height / options.stacksize, options.stacksize);
 
-    if (options.drop_last) {
-        neuron_mask.data.pop_back();
-        neuron_mask.depth -= 1;
-    } 
-
     bool n1 = false, n2 = false, n3 = false, n4 = false;
 
     if(options.threeclass){
@@ -567,30 +582,32 @@ bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log
     // that comes later as the mask must match
     // ROI is larger here than final as we need 'rotation' space
 
-    int half_roi_xy = static_cast<int>(ceil(static_cast<float>(options.roi_xy) / 2.0));
-    int half_roi_depth = static_cast<int>(ceil(static_cast<float>(options.roi_depth) / 2.0));
+    if (!options.noroi) { 
+        int half_roi_xy = static_cast<int>(ceil(static_cast<float>(options.roi_xy) / 2.0));
+        int half_roi_depth = static_cast<int>(ceil(static_cast<float>(options.roi_depth) / 2.0));
 
-    // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
-    ImageU8L3D smaller = Resize(neuron_mask, static_cast<int>(ceil(static_cast<float>(neuron_mask.width) / 2.0)), 
-                                    static_cast<int>(ceil(static_cast<float>(neuron_mask.height) / 2.0)), 
-                                    static_cast<int>(ceil(static_cast<float>(neuron_mask.depth) / 2.0)));
+        // Because we are going to AUG, we make the ROI a bit bigger so we can rotate around
+        ImageU8L3D smaller = Resize(neuron_mask, static_cast<int>(ceil(static_cast<float>(neuron_mask.width) / 2.0)), 
+                                        static_cast<int>(ceil(static_cast<float>(neuron_mask.height) / 2.0)), 
+                                        static_cast<int>(ceil(static_cast<float>(neuron_mask.depth) / 2.0)));
 
-    ROI roi_found = FindROI(smaller, half_roi_xy, half_roi_depth);
-    roi.x = roi_found.x * 2;
-    roi.y = roi_found.y * 2;
-    roi.z = roi_found.z * 2;
-    roi.xy_dim = options.roi_xy;
-    roi.depth = options.roi_depth;
+        ROI roi_found = FindROI(smaller, half_roi_xy, half_roi_depth);
+        roi.x = roi_found.x * 2;
+        roi.y = roi_found.y * 2;
+        roi.z = roi_found.z * 2;
+        roi.xy_dim = options.roi_xy;
+        roi.depth = options.roi_depth;
 
-    // Check on ROI-Z as it's likely to not shift
-    if (options.roi_depth == neuron_mask.depth) {
-        roi.z = 0;
+        // Check on ROI-Z as it's likely to not shift
+        if (options.roi_depth == neuron_mask.depth) {
+            roi.z = 0;
+        }
+        
+        std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
+        neuron_mask = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     }
  
-    std::cout << tiff_path << ",ROI," << libcee::ToString(roi.x) << "," << libcee::ToString(roi.y) << "," << libcee::ToString(roi.z) << "," << roi.xy_dim << "," << roi.depth << std::endl;
-    ImageU8L3D cropped = Crop(neuron_mask, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
-    FlipVerticalI(cropped);
-
+    FlipVerticalI(neuron_mask);
     std::vector<glm::vec4> graph;
     std::vector<std::string> extra_data;
     bool graphaug = _ReadGraph(coord_path, graph, extra_data, roi);
@@ -600,9 +617,8 @@ bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log
     float rd = static_cast<float>(options.final_depth) / static_cast<float>(options.roi_depth);
 
     // Save the masks
-    std::string csv_line =  libcee::IntToStringLeadingZeroes(image_idx, 5) + ", ";
     std::string output_path = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
-    ImageU8L mipped = Project(cropped, ProjectionType::MAX_INTENSITY);
+    ImageU8L mipped = Project(neuron_mask, ProjectionType::MAX_INTENSITY);
 
     // Not sure why the inverse. GLM versus our sampling I suppose
     ImageU8L resized = Resize(mipped, options.final_width, options.final_height);
@@ -610,24 +626,27 @@ bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log
     if (options.flatten){
         SaveFITS(output_path, resized);
     } else {
-        if (options.final_width != cropped.width || options.final_depth != cropped.depth || options.final_height != cropped.height) {
-            if (cropped.depth % 2 == 1) {
-                cropped.data.pop_back();
+        if (options.final_width != neuron_mask.width || options.final_depth != neuron_mask.depth || options.final_height != neuron_mask.height) {
+            if (neuron_mask.depth % 2 == 1) {
+                neuron_mask.data.pop_back();
             }
 
-            ImageU8L3D resized3d = Resize(cropped, options.final_width, options.final_height, options.final_depth);
+            ImageU8L3D resized3d = Resize(neuron_mask, options.final_width, options.final_height, options.final_depth);
             SaveFITS(output_path, resized3d);
         } else {
-            SaveFITS(output_path, cropped);
+            SaveFITS(output_path, neuron_mask);
         }
     }
 
     // Write a JPG just in case
+    // JPG uses bottom left as origin point, not top left as FITS generally does so it will look vertically flipped.
     ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(resized));
     std::string output_path_jpg = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.jpg";
     SaveJPG(output_path_jpg, jpeged);
 
     // Write out to the CSV file
+    // TODO - no more CSV I'd say - move to DB
+    /*
     for (int j = 0; j < 4; j++){
         glm::vec4 av = graph[j];
         std::string x = libcee::ToString(av.x * rw);
@@ -636,7 +655,7 @@ bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log
         csv_line += x + "," + y + "," + z + "," + extra_data[j] + ",";
     }
 
-    csv_line += tiff_path;
+    csv_line += tiff_path; */
 
     return true;
 }
