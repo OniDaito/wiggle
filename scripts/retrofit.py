@@ -24,7 +24,7 @@ CSV Format for the U-Net file:
 import argparse
 import os
 import fnmatch
-
+from tqdm import tqdm
 
 fits_replacements = [("ins-6-mCherry/", "mcherry_fits/"), ("ins-6-mCherry_2/", "mcherry_2_fits/")]
 
@@ -137,7 +137,7 @@ def retrofit(args):
     with open(args.dataset + "/master_dataset.csv", "w") as w:
         w.write("ogsource,ogmask,fitssource,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
         
-        for k in source_to_derived.keys():
+        for k in tqdm(source_to_derived.keys()):
             # We have all the operations, but we need to consider augmentation.
             # We should read the directory for the items we might need
 
