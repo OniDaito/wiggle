@@ -148,10 +148,10 @@ def retrofit(args):
                 # Check for augmentation
                 fpath =  os.path.dirname(source_to_derived[k])
                 fname =  os.path.basename(source_to_derived[k]); fname = fname.split("_")[0]
-                print(fpath, fname)
-
                 found_masks = find_files(fname + "*mask.fits", fpath)
+                found_masks.sort()
                 found_derived = find_files(fname + "*layered.fits", fpath)
+                found_derived.sort()
                 assert(len(found_masks) == len(found_derived))
 
                 for fidx in range(len(found_masks)):
