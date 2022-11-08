@@ -299,7 +299,6 @@ void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std:
             std::function<uint16_t (uint16_t)> thresh_func = [thresh](uint16_t x) { if(x >= thresh) { return x;} return static_cast<uint16_t>(0); };
             stacked = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
             converted = imagine::Convert<ImageF32L3D>(stacked);
-
         } else {
             converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
         }
