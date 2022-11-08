@@ -23,9 +23,21 @@ CSV Format for the U-Net file:
 
 import argparse
 import os
+import fnmatch
 
 
 fits_replacements = [("ins-6-mCherry/", "mcherry_fits/"), ("ins-6-mCherry_2/", "mcherry_2_fits/")]
+
+def find_files(pattern, path):
+    result = []
+
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(os.path.join(root, name))
+
+    return result
+
 
 def retrofit(args):
     source_to_derived = {}
@@ -126,26 +138,46 @@ def retrofit(args):
         w.write("ogsource,ogmask,fitssource,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
         
         for k in source_to_derived.keys():
-            try:
-                csv_line = k + "," + source_to_mask[k] + "," + source_to_fits[k] + "," + source_to_log[k] + \
-                    "," + source_to_dat[k] + "," + source_to_derived[k] + "," + source_to_newmask[k]
+            # We have all the operations, but we need to consider augmentation.
+            # We should read the directory for the items we might need
 
-                if k in source_to_roi.keys():
-                    roi = source_to_roi[k]
-                    roi_x_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
-                    roi_y_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
-                    csv_line += "," + str(roi['xs'] + roi_x_off) + "," + str(roi['ys'] + roi_y_off) + "," + str(args.roiwh) + "," + str(args.roid)
-                else:
-                    csv_line += ",0,0,0,0"
+            actual_files = []
+            if os.path.exists(source_to_derived[k]):
+                actual_files.append((k, source_to_derived[k], source_to_newmask[k]))
+            else:
+                # Check for augmentation
+                fpath =  os.path.dirname(source_to_derived[k])
+                fname =  os.path.basename(source_to_derived[k]); fname = fname.split("_")[0]
+                print(fpath, fname)
 
-                if k in source_to_back.keys():
-                    csv_line += "," + str(source_to_back[k]) + "\n"
-                else:
-                    csv_line += ",0\n"
+                found_masks = find_files(fname + "*mask.fits", fpath)
+                found_derived = find_files(fname + "*layered.fits", fpath)
+                assert(len(found_masks) == len(found_derived))
 
-                w.write(csv_line)
-            except:
-                print("Not all keys found for", k)
+                for fidx in range(len(found_masks)):
+                    actual_files.append((found_derived[fidx], found_masks[fidx]))
+
+            for actual in actual_files:
+                try:
+                    csv_line = k + "," + source_to_mask[k] + "," + source_to_fits[k] + "," + source_to_log[k] + \
+                        "," + source_to_dat[k] + "," + actual[0] + "," + actual[1]
+
+                    if k in source_to_roi.keys():
+                        roi = source_to_roi[k]
+                        roi_x_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
+                        roi_y_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
+                        csv_line += "," + str(roi['xs'] + roi_x_off) + "," + str(roi['ys'] + roi_y_off) + "," + str(args.roiwh) + "," + str(args.roid)
+                    else:
+                        csv_line += ",0,0,0,0"
+
+                    if k in source_to_back.keys():
+                        csv_line += "," + str(source_to_back[k]) + "\n"
+                    else:
+                        csv_line += ",0\n"
+
+                    w.write(csv_line)
+                except:
+                    print("Not all keys found for", k)
 
 
 def create_unet_csv(args):
@@ -164,7 +196,6 @@ def create_unet_csv(args):
     with open(args.dataset + "/unet_dataset.csv", "w") as f:
         for idx in range(len(infiles)):
             f.write(infiles[idx] + "," + outfiles[idx] + "\n")
-
 
 
 if __name__ == "__main__":
