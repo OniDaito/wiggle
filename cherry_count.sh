@@ -82,7 +82,7 @@ touch dataset_4.log
 ./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180202-QL795-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180202-QL795-d0.0 -o /phd/wormz/queelim/ >> dataset_1.log &
 ./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180208-QL285-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180208-QL285-d0.0 -o /phd/wormz/queelim/ >> dataset_2.log &
 ./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180302-QL285-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180302-QL285-d0.0 -o /phd/wormz/queelim/ >> dataset_3.log &
-./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180302-QL285-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180302-QL285-d0.0 -o /phd/wormz/queelim/ >> dataset_4.log
+./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180302-QL569-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180302-QL569-d0.0 -o /phd/wormz/queelim/ >> dataset_4.log
 
 ./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180302-QL849-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180302-QL849-d0.0 -o /phd/wormz/queelim/ >> dataset_1.log &
 ./release/count -b -i /phd/wormz/queelim/ins-6-mCherry_2/20180308-QL285-d0.0 -l /phd/wormz/queelim/counts.csv -a /phd/wormz/queelim/ins-6-mCherry_2/Annotations/Reesha_analysis/20180308-QL285-d0.0 -o /phd/wormz/queelim/ >> dataset_2.log &

@@ -365,7 +365,6 @@ def read_from_raw(args):
                 img_extentions = ["fits", "FITS"]
 
                 if any(x in filename for x in img_extentions):
-
                     # We need to check there are no duffers in this list
                     path = os.path.join(dirname, filename)
                     savedfilenames.append(path)

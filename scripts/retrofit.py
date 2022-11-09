@@ -10,7 +10,7 @@ retrofit.py - retroactively generate the CSV files for a
 particular dataset.
 
 Example use:
-python retrofit.py
+python retrofit.py --dataset /media/proto_backup/wormz/queelim/dataset_2d_all_extreme
 
 CSV Format for the main file:
 original source, original mask, fits source, annotation log, annotation dat,
