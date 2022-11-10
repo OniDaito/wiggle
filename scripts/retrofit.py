@@ -180,9 +180,10 @@ def retrofit(args):
                         roi = source_to_roi[k]
                         roi_x_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
                         roi_y_off = ((roi['xe'] - roi['xs']) - args.roiwh) / 2
-                        csv_line += "," + str(roi['xs'] + roi_x_off) + "," + str(roi['ys'] + roi_y_off) + "," + str(args.roiwh) + "," + str(args.roid)
+                        roi_z_off = ((roi['ze'] - roi['zs']) - args.roid) / 2
+                        csv_line += "," + str(roi['xs'] + roi_x_off) + "," + str(roi['ys'] + roi_y_off) + "," + str(roi['zs'] + roi_z_off) + "," + str(args.roiwh) + "," + str(args.roid)
                     else:
-                        csv_line += ",0,0,0,0"
+                        csv_line += ",0,0,0,0,0"
 
                     if k in source_to_back.keys():
                         csv_line += "," + str(source_to_back[k]) + "\n"
