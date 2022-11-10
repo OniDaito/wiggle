@@ -72,12 +72,6 @@ def retrofit(args):
                     if fits_rep[0] in s:
                         source_to_fits[s] = s.replace(fits_rep[0], fits_rep[1])
 
-            # ... and the masks
-            for s in source_to_mask.keys():
-                for fits_rep in fits_replacements:
-                    if fits_rep[0] in s:
-                        source_to_fitsmask[s] = s.replace(fits_rep[0], fits_rep[1])
-
             # Now find the background
             for lidx, line in enumerate(lines[-1]):
                 if "Renaming" in line:
@@ -104,6 +98,12 @@ def retrofit(args):
                     source_to_dat[original] = dat
                     source_to_log[original] = dat.replace("_2.dat", "_2.log")
                     _mts[dat] = original
+
+            # ... and the fits version
+            for s in source_to_mask.keys():
+                for fits_rep in fits_replacements:
+                    if fits_rep[0] in s:
+                        source_to_fitsmask[s] = s.replace(fits_rep[0], fits_rep[1])
 
             # Now lets look for the ROIs.
             # Reported ROIs are bigger than actual often as we go big then small if we are augmenting.
