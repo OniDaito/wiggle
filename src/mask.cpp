@@ -88,6 +88,7 @@ bool StackMask(Options &options, std::string &tiff_path, std::string &log_path, 
     std::string new_dir = libcee::PathFromPath(output_path);
 
     if (!folder_exists(new_dir)) {
+        std::cout << "Making new directory " << new_dir << std::endl;
         mkdir(new_dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     }
    
