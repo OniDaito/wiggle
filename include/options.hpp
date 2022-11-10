@@ -19,6 +19,7 @@ typedef struct {
     std::string prefix = "";            // Prefix for the new files if renamed
     std::string output_log_path = "";   // Output log path
     std::string psf_path = "./images/PSF_born_wolf_3d.tif"; // The path to the deconvolution kernel.
+    std::string base_path = "";         // Used in stack/mask as the part to replace
     bool noprocess = false;
     bool noroi = false;
     bool rename = false;            // Rename the files
