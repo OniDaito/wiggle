@@ -24,6 +24,7 @@
 #include <imagine/imagine.hpp>
 #include <sys/stat.h>
 #include <map>
+#include <filesystem>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -89,7 +90,7 @@ bool StackMask(Options &options, std::string &tiff_path, std::string &log_path, 
 
     if (!folder_exists(new_dir)) {
         std::cout << "Making new directory " << new_dir << std::endl;
-        mkdir(new_dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        std::filesystem::create_directories(new_dir);
     }
    
     FlipVerticalI(neuron_mask); 
