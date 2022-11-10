@@ -153,11 +153,12 @@ int main (int argc, char ** argv) {
         }
     }
 
-    //return EXIT_FAILURE;
-    std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
-    std::cout << "Offset: " << options.offset_number << ", rename: " << options.rename << std::endl;
-    std::cout << "Subpixel, interplateZ: " << options.subpixel << ", " << options.interz << std::endl;
+    options.stacksize = 51;
+    options.final_depth = 51;
+    options.final_width = 640;
+    options.final_height = 300;
 
+    std::cout << "Loading annotation images from " << options.annotation_path << std::endl;
  
     // First, find and sort the annotation files
     std::vector<std::string> tiff_anno_files = FindAnnotations(options.annotation_path);
