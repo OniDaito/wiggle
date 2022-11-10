@@ -13,7 +13,7 @@ Example use:
 python retrofit.py --dataset /media/proto_backup/wormz/queelim/dataset_2d_all_extreme
 
 CSV Format for the main file:
-original source, original mask, fits source, annotation log, annotation dat,
+original source, original mask, fits source, fits mask, annotation log, annotation dat,
     new source name, new mask name, ROI X, Y, Z, WidthHeight, Depth, background
 
 CSV Format for the U-Net file:
@@ -26,6 +26,7 @@ import os
 import fnmatch
 from tqdm import tqdm
 
+# Bits to replace when looking for the fits files
 fits_replacements = [("ins-6-mCherry/", "mcherry_fits/"), ("ins-6-mCherry_2/", "mcherry_2_fits/")]
 
 def find_files(pattern, path):
@@ -42,6 +43,7 @@ def find_files(pattern, path):
 def retrofit(args):
     source_to_derived = {}
     source_to_fits = {}
+    source_to_fitsmask = {}
     source_to_roi = {}
     source_to_back = {}
     source_to_mask = {}
@@ -69,6 +71,12 @@ def retrofit(args):
                 for fits_rep in fits_replacements:
                     if fits_rep[0] in s:
                         source_to_fits[s] = s.replace(fits_rep[0], fits_rep[1])
+
+            # ... and the masks
+            for s in source_to_mask.keys():
+                for fits_rep in fits_replacements:
+                    if fits_rep[0] in s:
+                        source_to_fitsmask[s] = s.replace(fits_rep[0], fits_rep[1])
 
             # Now find the background
             for lidx, line in enumerate(lines[-1]):
@@ -135,7 +143,7 @@ def retrofit(args):
 
 
     with open(args.dataset + "/master_dataset.csv", "w") as w:
-        w.write("ogsource,ogmask,fitssource,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
+        w.write("ogsource,ogmask,fitssource,fitsmask,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
         
         for k in tqdm(source_to_derived.keys()):
             # We have all the operations, but we need to consider augmentation.
@@ -159,8 +167,8 @@ def retrofit(args):
 
             for actual in actual_files:
                 try:
-                    csv_line = k + "," + source_to_mask[k] + "," + source_to_fits[k] + "," + source_to_log[k] + \
-                        "," + source_to_dat[k] + "," + actual[0] + "," + actual[1]
+                    csv_line = k + "," + source_to_mask[k] + "," + source_to_fits[k] + "," + source_to_fitsmask[k] + \
+                        "," + source_to_log[k] + "," + source_to_dat[k] + "," + actual[0] + "," + actual[1]
 
                     if k in source_to_roi.keys():
                         roi = source_to_roi[k]
