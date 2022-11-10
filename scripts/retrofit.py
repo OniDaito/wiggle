@@ -9,6 +9,8 @@ Author : Benjamin Blundell - k1803390@kcl.ac.uk
 retrofit.py - retroactively generate the CSV files for a
 particular dataset.
 
+Only works with cropped images. Doesn't work with resized images (at present)
+
 Example use:
 python retrofit.py --dataset /media/proto_backup/wormz/queelim/dataset_2d_all_extreme
 
@@ -19,6 +21,8 @@ original source, original mask, fits source, fits mask, annotation log, annotati
 CSV Format for the U-Net file:
     input, output
 
+TODO - add resizing options eventually.
+
 """
 
 import argparse
@@ -28,6 +32,7 @@ from tqdm import tqdm
 
 # Bits to replace when looking for the fits files
 fits_replacements = [("ins-6-mCherry/", "mcherry_fits/"), ("ins-6-mCherry_2/", "mcherry_2_fits/")]
+
 
 def find_files(pattern, path):
     result = []
@@ -70,7 +75,7 @@ def retrofit(args):
             for s in source_to_derived.keys():
                 for fits_rep in fits_replacements:
                     if fits_rep[0] in s:
-                        source_to_fits[s] = s.replace(fits_rep[0], fits_rep[1])
+                        source_to_fits[s] = s.replace(fits_rep[0], fits_rep[1]).replace("tiff", "fits")
 
             # Now find the background
             for lidx, line in enumerate(lines[-1]):
@@ -101,9 +106,11 @@ def retrofit(args):
 
             # ... and the fits version
             for s in source_to_mask.keys():
+                m = source_to_mask[s]
+    
                 for fits_rep in fits_replacements:
-                    if fits_rep[0] in s:
-                        source_to_fitsmask[s] = s.replace(fits_rep[0], fits_rep[1])
+                    if fits_rep[0] in m:
+                        source_to_fitsmask[s] = m.replace(fits_rep[0], fits_rep[1]).replace("tiff", "fits")
 
             # Now lets look for the ROIs.
             # Reported ROIs are bigger than actual often as we go big then small if we are augmenting.
@@ -140,7 +147,6 @@ def retrofit(args):
                             source_to_roi[original] = roi
                         except:
                             print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
-
 
     with open(args.dataset + "/master_dataset.csv", "w") as w:
         w.write("ogsource,ogmask,fitssource,fitsmask,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
