@@ -102,6 +102,7 @@ def retrofit(args):
                     source_to_mask[original] = mask
                     source_to_dat[original] = dat
                     source_to_log[original] = dat.replace("_2.dat", "_2.log")
+                    print(dat)
                     _mts[dat] = original
 
             # ... and the fits version
