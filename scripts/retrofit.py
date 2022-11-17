@@ -140,22 +140,24 @@ def retrofit(args):
             if old_style:
                 for lidx, line in enumerate(lines):
                     if "Masking: " in lines[lidx]:
+
                         for ridx in range(lidx+1, len(lines)):
                             if "ROI: " in lines[ridx]:
-                                dat = lines[ridx].replace("Masking: ","").replace("\n","")
-                                try:
-                                    original = _mts[dat]
-                                    tokens = line.replace(" ", "").replace("ROI:","").split(",")
-                                    roi = {}
-                                    roi["xs"] = int(tokens[0])
-                                    roi["ys"] = int(tokens[1])
-                                    roi["zs"] = int(tokens[2])
-                                    roi["xe"] = roi["xs"] + int(tokens[3])
-                                    roi["ye"] = roi["ys"] + int(tokens[3])
-                                    roi["ze"] = roi["zs"] + int(tokens[4])
-                                    source_to_roi[original] = roi
-                                except:
-                                    print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
+                                dat = lines[lidx].replace("Masking: ","").replace("\n","")
+                                #try:
+                                rline = lines[ridx]
+                                original = _mts[dat]
+                                tokens = rline.replace(" ", "").replace("ROI:","").split(",")
+                                roi = {}
+                                roi["xs"] = int(tokens[0])
+                                roi["ys"] = int(tokens[1])
+                                roi["zs"] = int(tokens[2])
+                                roi["xe"] = roi["xs"] + int(tokens[3])
+                                roi["ye"] = roi["ys"] + int(tokens[3])
+                                roi["ze"] = roi["zs"] + int(tokens[4])
+                                source_to_roi[original] = roi
+                                #except:
+                                #    print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
                                 
                                 break
 
