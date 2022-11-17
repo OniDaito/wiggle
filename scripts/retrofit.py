@@ -101,9 +101,8 @@ def retrofit(args):
                     original = tokens1[1].replace("\n","")
                     source_to_mask[original] = mask
                     source_to_dat[original] = dat
-                    source_to_log[original] = dat.replace("_2.dat", "_2.log")
-                    print(dat)
                     _mts[dat] = original
+                    source_to_log[original] = dat.replace("_2.dat", "_2.log")
 
             # ... and the fits version
             for s in source_to_mask.keys():
@@ -141,25 +140,25 @@ def retrofit(args):
             if old_style:
                 for lidx, line in enumerate(lines):
                     if "Masking: " in lines[lidx]:
+                        dat = lines[lidx].replace("Masking: ","").replace("\n","")
 
                         for ridx in range(lidx+1, len(lines)):
                             if "ROI: " in lines[ridx]:
-                                dat = lines[lidx].replace("Masking: ","").replace("\n","")
-                                #try:
-                                rline = lines[ridx]
-                                original = _mts[dat]
-                                tokens = rline.replace(" ", "").replace("ROI:","").split(",")
-                                roi = {}
-                                roi["xs"] = int(tokens[0])
-                                roi["ys"] = int(tokens[1])
-                                roi["zs"] = int(tokens[2])
-                                roi["xe"] = roi["xs"] + int(tokens[3])
-                                roi["ye"] = roi["ys"] + int(tokens[3])
-                                roi["ze"] = roi["zs"] + int(tokens[4])
-                                source_to_roi[original] = roi
-                                #except:
-                                #    print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
-                                
+                                try:
+                                    rline = lines[ridx]
+                                    original = _mts[dat]
+                                    tokens = rline.replace(" ", "").replace("ROI:","").split(",")
+                                    roi = {}
+                                    roi["xs"] = int(tokens[0])
+                                    roi["ys"] = int(tokens[1])
+                                    roi["zs"] = int(tokens[2])
+                                    roi["xe"] = roi["xs"] + int(tokens[3])
+                                    roi["ye"] = roi["ys"] + int(tokens[3])
+                                    roi["ze"] = roi["zs"] + int(tokens[4])
+                                    source_to_roi[original] = roi
+                                except Exception as e:
+                                    print("Couldn't find ROI for line:", lines[lidx].replace("\n",""))
+
                                 break
 
     else:
@@ -200,6 +199,8 @@ def retrofit(args):
                         roi_z_off = ((roi['ze'] - roi['zs']) - args.roid) / 2
                         csv_line += "," + str(roi['xs'] + roi_x_off) + "," + str(roi['ys'] + roi_y_off) + "," + str(roi['zs'] + roi_z_off) + "," + str(args.roiwh) + "," + str(args.roid)
                     else:
+                        print("ROI Fail")
+                        assert(False)
                         csv_line += ",0,0,0,0,0"
 
                     if k in source_to_back.keys():
