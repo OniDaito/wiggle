@@ -112,6 +112,7 @@ def retrofit(args):
                     if fits_rep[0] in m:
                         source_to_fitsmask[s] = m.replace(fits_rep[0], fits_rep[1]).replace("tiff", "fits")
 
+            old_style = False
             # Now lets look for the ROIs.
             # Reported ROIs are bigger than actual often as we go big then small if we are augmenting.
             # Typically, ROI sizes are set on the command line.
@@ -130,28 +131,41 @@ def retrofit(args):
                         roi["ye"] = roi["ys"] + int(tokens[5])
                         roi["ze"] = roi["zs"] + int(tokens[6])
                         source_to_roi[filepath] = roi
-                # Old style ROI
+            
+            # Old style ROI - bit iffy this one
                 elif "ROI: " in line:
-                    if "Masking: " in lines[lidx-1]:
-                        dat = lines[lidx-1].replace("Masking: ","").replace("\n","")
-                        try:
-                            original = _mts[dat]
-                            tokens = line.replace(" ", "").replace("ROI:","").split(",")
-                            roi = {}
-                            roi["xs"] = int(tokens[0])
-                            roi["ys"] = int(tokens[1])
-                            roi["zs"] = int(tokens[2])
-                            roi["xe"] = roi["xs"] + int(tokens[3])
-                            roi["ye"] = roi["ys"] + int(tokens[3])
-                            roi["ze"] = roi["zs"] + int(tokens[4])
-                            source_to_roi[original] = roi
-                        except:
-                            print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
+                    old_style = True
+                    break
 
+            if old_style:
+                for lidx, line in enumerate(lines):
+                    if "Masking: " in lines[lidx]:
+                        for ridx in range(lidx+1, len(lines)):
+                            if "ROI: " in lines[ridx]:
+                                dat = lines[ridx].replace("Masking: ","").replace("\n","")
+                                try:
+                                    original = _mts[dat]
+                                    tokens = line.replace(" ", "").replace("ROI:","").split(",")
+                                    roi = {}
+                                    roi["xs"] = int(tokens[0])
+                                    roi["ys"] = int(tokens[1])
+                                    roi["zs"] = int(tokens[2])
+                                    roi["xe"] = roi["xs"] + int(tokens[3])
+                                    roi["ye"] = roi["ys"] + int(tokens[3])
+                                    roi["ze"] = roi["zs"] + int(tokens[4])
+                                    source_to_roi[original] = roi
+                                except:
+                                    print("Couldn't find ROI for line:", lines[lidx-1].replace("\n",""))
+                                
+                                break
+
+    else:
+        print("No dataset.log found!")
+    
     with open(args.dataset + "/master_dataset.csv", "w") as w:
         w.write("ogsource,ogmask,fitssource,fitsmask,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back\n")
-        
-        for k in tqdm(source_to_derived.keys()):
+
+        for k in source_to_derived.keys():
             # We have all the operations, but we need to consider augmentation.
             # We should read the directory for the items we might need
 
@@ -160,8 +174,8 @@ def retrofit(args):
                 actual_files.append((k, source_to_derived[k], source_to_newmask[k]))
             else:
                 # Check for augmentation
-                fpath =  os.path.dirname(source_to_derived[k])
-                fname =  os.path.basename(source_to_derived[k]); fname = fname.split("_")[0]
+                fpath = os.path.dirname(source_to_derived[k])
+                fname = os.path.basename(source_to_derived[k]); fname = fname.split("_")[0]
                 found_masks = find_files(fname + "*mask.fits", fpath)
                 found_masks.sort()
                 found_derived = find_files(fname + "*layered.fits", fpath)
