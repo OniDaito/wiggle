@@ -138,17 +138,20 @@ def retrofit(args):
                     break
 
             if old_style:
+                counted = []
+
                 for lidx, line in enumerate(lines):
                     if "Masking: " in lines[lidx]:
                         dat = lines[lidx].replace("Masking: ","").replace("\n","")
 
                         for ridx in range(lidx+1, len(lines)):
-                            if "ROI: " in lines[ridx]:
+                            if "ROI: " in lines[ridx] and ridx not in counted:
                                 try:
                                     rline = lines[ridx]
                                     original = _mts[dat]
                                     tokens = rline.replace(" ", "").replace("ROI:","").split(",")
                                     roi = {}
+                                    counted.append(ridx)
                                     roi["xs"] = int(tokens[0])
                                     roi["ys"] = int(tokens[1])
                                     roi["zs"] = int(tokens[2])
