@@ -67,7 +67,6 @@ def retrofit(args):
                     tokens = line.split(" to ")
                     original = tokens[0].replace("Renaming ","")
                     derived = tokens[1].replace("\n","")
-
                     source_to_derived[original] = derived
                     source_to_newmask[original] = derived.replace("_layered", "_mask")
 
@@ -90,6 +89,7 @@ def retrofit(args):
                         source_to_back[original]  = 0
 
             _mts = {}
+            _ats = {}
 
             # Now find the mask file used
             for line in lines:
@@ -101,6 +101,7 @@ def retrofit(args):
                     original = tokens1[1].replace("\n","")
                     source_to_mask[original] = mask
                     source_to_dat[original] = dat
+                    _ats[mask] = original
                     _mts[dat] = original
                     source_to_log[original] = dat.replace("_2.dat", "_2.log")
 
@@ -121,8 +122,9 @@ def retrofit(args):
                 if ",ROI," in line:
                     tokens = line.split(",")
                     filepath = tokens[0]
+                    og = _ats[filepath]
 
-                    if filepath in source_to_derived.keys():
+                    if og in source_to_derived.keys():
                         roi = {}
                         roi["xs"] = int(tokens[2])
                         roi["ys"] = int(tokens[3])
@@ -130,7 +132,7 @@ def retrofit(args):
                         roi["xe"] = roi["xs"] + int(tokens[5])
                         roi["ye"] = roi["ys"] + int(tokens[5])
                         roi["ze"] = roi["zs"] + int(tokens[6])
-                        source_to_roi[filepath] = roi
+                        source_to_roi[og] = roi
             
             # Old style ROI - bit iffy this one
                 elif "ROI: " in line:
@@ -173,6 +175,7 @@ def retrofit(args):
         for k in source_to_derived.keys():
             # We have all the operations, but we need to consider augmentation.
             # We should read the directory for the items we might need
+            print(k)
 
             actual_files = []
             if os.path.exists(source_to_derived[k]):
