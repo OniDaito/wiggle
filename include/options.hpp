@@ -17,7 +17,6 @@ typedef struct {
     std::string output_path = ".";      // Output path
     std::string annotation_path = ".";  // Path to the annotations
     std::string prefix = "";            // Prefix for the new files if renamed
-    std::string output_log_path = "";   // Output log path
     std::string psf_path = "./images/PSF_born_wolf_3d.tif"; // The path to the deconvolution kernel.
     std::string base_path = "";         // Used in stack/mask as the part to replace
     bool noprocess = false;

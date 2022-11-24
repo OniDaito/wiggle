@@ -24,6 +24,7 @@
 #include <imagine/imagine.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <map>
+#include <utility>
 #include "volume.hpp"
 #include "image.hpp"
 #include "data.hpp"
@@ -32,6 +33,7 @@
 #include "options.hpp"
 
 using namespace imagine;
+
 
 bool is_csv_empty(std::string path) {
     std::ifstream file(path);
@@ -69,9 +71,6 @@ int main (int argc, char ** argv) {
             case 'o' :
                 options.output_path = std::string(optarg);
                 image_idx = GetOffetNumber(options.output_path);
-                break;
-            case 'l' :
-                options.output_log_path = std::string(optarg);
                 break;
             case 'p' :
                 options.prefix = std::string(optarg);
@@ -161,6 +160,18 @@ int main (int argc, char ** argv) {
     std::cout << "Loading input images from " << options.image_path << std::endl;
 
     std::vector<std::string> tiff_input_files = FindInputFiles(options.image_path);
+    
+    // The supporting CSV file for the dataset
+    std::string csv_file_path = options.output_path + "/master_dataset.csv";
+    std::ofstream out_csv_stream; //ofstream is the class for fstream package
+    out_csv_stream.open(csv_file_path, std::ios::app);
+
+    // For our fits versions, lets get the path replacements in
+    std::vector<std::pair<std::string, std::string>> fits_replacements = { {std::make_pair("ins-6-mCherry/", "mcherry_fits/")}, {std::make_pair("ins-6-mCherry_2/", "mcherry_2_fits/")}};
+
+    if (is_csv_empty(csv_file_path)) {
+        out_csv_stream << "ogsource,ogmask,fitssource,fitsmask,annolog,annodat,newsource,newmask,roix,roiy,roiz,roiwh,roid,back" << std::endl;
+    }
 
     // Pair up the tiffs with their log file and then the input and process them.
     for (std::string tiff_anno : tiff_anno_files) {
@@ -197,8 +208,38 @@ int main (int argc, char ** argv) {
                                     std::cout << "Masking: " << dat << std::endl;
                                     if (ProcessMask(options, tiff_anno, log, dat, ROTS, image_idx, roi)) {
                                         std::cout << "Stacking: " << tiff_input << std::endl;
-                                        TiffToFits(options, ROTS, tiff_input, image_idx, roi);
+                                        int background = TiffToFits(options, ROTS, tiff_input, image_idx, roi);
                                         std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
+
+                                        /* CSV Line 
+                                        original source, original mask, fits source, fits mask, annotation log,
+                                        annotation dat, new source name, new mask name, ROI X, Y, Z, WidthHeight,
+                                        Depth, background */
+
+                                        std::string fits_source = tiff_input;
+                                        std::string fits_mask = tiff_anno;
+
+                                        // TODO - ideally the pipe would return these path or be passed it I think.
+                                        std::string output_mask_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_mask.fits";
+                                        std::string output_source_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_layered.fits";
+                                     
+                                        for (auto rep : fits_replacements) {
+                                            fits_source = libcee::StringReplace(fits_source, rep.first, rep.second);
+                                            fits_mask = libcee::StringReplace(fits_mask, rep.first, rep.second);
+                                        }
+
+                                        if (options.num_augs > 1) {
+                                            for (int ci = 0; ci < options.num_augs; ci++) {
+                                                std::string aug_id  = libcee::IntToStringLeadingZeroes(ci, 2);
+                                                output_mask_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
+                                                output_source_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_layered.fits";
+                                            }
+                                        } else {
+                                            out_csv_stream << tiff_input << "," << tiff_anno << "," << fits_source << "," << fits_mask << "," 
+                                            << log << "," << dat << "," << output_source_name << "," << output_mask_name << ","
+                                            << roi.x << "," << roi.y << "," << roi.z << "," << roi.xy_dim << "," << roi.depth << "," << background << "\n";
+                                        }
+                                       
                                         paired = true;
                                         image_idx +=1;
                                         break;

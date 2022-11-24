@@ -58,9 +58,6 @@ int main (int argc, char ** argv) {
             case 'o' :
                 options.output_path = std::string(optarg);
                 break;
-            case 'l' :
-                options.output_log_path = std::string(optarg);
-                break;
             case 'p' :
                 options.prefix = std::string(optarg);
                 break;

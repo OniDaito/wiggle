@@ -28,7 +28,7 @@ using namespace imagine;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds, int &background) {
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(image_in);
 
@@ -100,6 +100,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise
         mode_predicate mp;
         int final_mode = std::max_element(mode_map.begin(), mode_map.end(), mp)->first;
         std::cout << "Background Value:" << final_mode << std::endl; 
+        background = final_mode;
         converted = Sub(converted, static_cast<float>(final_mode), true);
 
     } else {
@@ -145,7 +146,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise
 void _NoAugSource(const Options &options, ImageF32L3D processed, std::string image_id) {
    
     // Rotate, normalise then sum projection
-    std::string output_path = options.output_path + "/" + image_id + "_"  + "_layered.fits";
+    std::string output_path = options.output_path + "/" + image_id + "_layered.fits";
     if (options.flatten) {
         auto ptype = ProjectionType::SUM;
         
@@ -164,7 +165,7 @@ void _NoAugSource(const Options &options, ImageF32L3D processed, std::string ima
 
         // Write a JPG just in case
         ImageU8L jpeged = Convert<ImageU8L>(Convert<ImageF32L>(summed));
-        std::string output_path_jpg = options.output_path + "/" +  image_id + "_" + "_raw.jpg";
+        std::string output_path_jpg = options.output_path + "/" +  image_id + "_raw.jpg";
         SaveJPG(output_path_jpg, jpeged);
     } else {
         // ImageF32L3D normalised = Normalise(rotated);
@@ -259,7 +260,7 @@ void _AugSource(const Options &options, ImageF32L3D &processed, const std::vecto
  * @return bool if success or not
  */
 
-void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std::string &tiff_path, int image_idx, ROI &roi) {
+int TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std::string &tiff_path, int image_idx, ROI &roi) {
     ImageU16L image = LoadTiff<ImageU16L>(tiff_path); 
     ImageU16L3D stacked(image.width, (image.height / (options.stacksize * options.channels)), options.stacksize);
     uint coff = 0;
@@ -293,6 +294,8 @@ void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std:
         stacked = Crop(stacked, roi.x, roi.y, roi.z, roi.xy_dim, roi.xy_dim, roi.depth);
     }
 
+    int background = options.cutoff;
+
     if (!options.noprocess){
         if (options.otsu){
             auto thresh = imagine::Otsu(stacked);
@@ -300,7 +303,7 @@ void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std:
             stacked = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
             converted = imagine::Convert<ImageF32L3D>(stacked);
         } else {
-            converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds);
+            converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds, background);
         }
     } else  {
         converted = imagine::Convert<ImageF32L3D>(stacked);
@@ -311,6 +314,9 @@ void TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std:
     } else {
         _NoAugSource(options, converted, image_id);
     }
+
+    // TODO - this is not ideal really. We should probably reconsider interfaces
+    return background;
 }
 
 
@@ -421,9 +427,6 @@ bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path
     if (!n1 || !n2 || !n3 || !n4) {
         return false;
     }
-
-    std::ofstream out_stream; //ofstream is the class for fstream package
-    out_stream.open(options.output_log_path, std::ios::app); 
 
     // Find the ROI using the mask - Do this on a smaller version of the image for speed.
     // Perform some augmentation by moving the ROI around a bit. Save these augs for the masking
