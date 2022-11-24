@@ -233,6 +233,10 @@ int main (int argc, char ** argv) {
                                                 std::string aug_id  = libcee::IntToStringLeadingZeroes(ci, 2);
                                                 output_mask_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
                                                 output_source_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_layered.fits";
+                                            
+                                                out_csv_stream << tiff_input << "," << tiff_anno << "," << fits_source << "," << fits_mask << "," 
+                                                    << log << "," << dat << "," << output_source_name << "," << output_mask_name << ","
+                                                    << roi.x << "," << roi.y << "," << roi.z << "," << roi.xy_dim << "," << roi.depth << "," << background << "\n";
                                             }
                                         } else {
                                             out_csv_stream << tiff_input << "," << tiff_anno << "," << fits_source << "," << fits_mask << "," 
