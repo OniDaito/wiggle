@@ -31,6 +31,7 @@ typedef struct {
     bool bottom = true;             // Are we looking at the bottom channels of the two? (always true in our data at the moment)
     bool drop_last = false;         // Drop the last Z slice to make an even stack
     bool autoback = false;          // Automatic background detection
+    bool safeaug = false;           // Safe aug moves the image slightly when cropping
     bool deconv = false;            // Do we deconvolve?
     bool max_intensity = false;     // If flattening, use max intensity
     int channels = 2;               // 2 Channels initially in these images
