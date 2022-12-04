@@ -34,6 +34,7 @@ typedef struct {
     bool safeaug = false;           // Safe aug moves the image slightly when cropping
     bool deconv = false;            // Do we deconvolve?
     bool max_intensity = false;     // If flattening, use max intensity
+    bool contrast = false;          // Apply a contrast function
     int channels = 2;               // 2 Channels initially in these images
     int stacksize = 51;             // How many stacks in our input 2D image
     int final_depth = 51;           // number of z-slices - TODO - should be set automatically along with width and height

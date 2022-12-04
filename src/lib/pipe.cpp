@@ -28,7 +28,7 @@ using namespace imagine;
  * @return ImageF32L3D 
  */
 
-ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds, int &background) {
+ImageF32L3D ProcessPipe(ImageU16L3D const &image_in, bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds, int &background, bool contrast) {
     // Convert to float as we need to do some operations
     ImageF32L3D converted = Convert<ImageF32L3D>(image_in);
 
@@ -107,6 +107,11 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise
         converted = Sub(converted, noise, true);
     }
 
+    float min, max;
+    MinMax(converted, min, max);
+    float range = max - min;
+    std::function<float (float)> contrast_func = [min, range](float x) { return (x - min / range) * 4096; };
+
     // Perform a subtraction on the images, removing background
     if (deconv){ 
         // Drop the last layer if the image has an odd depth
@@ -124,13 +129,24 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in,  bool autoback, float noise
         ImageF32L3D kernel = LoadTiff<ImageF32L3D>(path_kernel);
         ImageF32L3D deconved = DeconvolveFFT(converted, kernel, deconv_rounds);
 
+        if (contrast) {
+            deconved = ApplyFunc<ImageF32L3D, float>(deconved, contrast_func);
+        }
+
         if (dropped) {
             converted.data.push_back(last_slice);
             converted.depth += 1;
         }
+
+       
         
         return deconved;
     }
+
+    if (contrast) {
+        converted = ApplyFunc<ImageF32L3D, float>(converted, contrast_func);
+    }
+
     return converted;
 }
 
@@ -303,7 +319,7 @@ int TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std::
             stacked = ApplyFunc<ImageU16L3D, uint16_t>(stacked, thresh_func);
             converted = imagine::Convert<ImageF32L3D>(stacked);
         } else {
-            converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds, background);
+            converted = ProcessPipe(stacked, options.autoback, options.cutoff, options.deconv, options.psf_path, options.deconv_rounds, background, options.contrast);
         }
     } else  {
         converted = imagine::Convert<ImageF32L3D>(stacked);

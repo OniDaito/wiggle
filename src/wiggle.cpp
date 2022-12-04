@@ -58,7 +58,7 @@ int main (int argc, char ** argv) {
     int option_index = 0;
     int image_idx = 0;
 
-    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdmuvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, (char **)argv, "i:o:a:p:rtfdmuxvn:z:w:h:l:c:s:j:q:k:g:e:?", long_options, &option_index)) != -1) {
         switch (c) {
             case 0 :
                 break;
@@ -95,6 +95,9 @@ int main (int argc, char ** argv) {
                 break;
             case 'v' :
                 options.otsu = true;
+                break;
+            case 'x' :
+                options.contrast = true;
                 break;
             case 'n':
                 options.offset_number = libcee::FromString<int>(optarg);
