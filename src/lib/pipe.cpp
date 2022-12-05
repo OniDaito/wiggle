@@ -122,7 +122,7 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in, bool autoback, float noise,
     float min, max;
     MinMax(converted, min, max);
     float range = max - min;
-    std::function<float (float)> contrast_func = [min, range](float x) { return (x - min / range) * 4096; };
+    std::function<float (float)> contrast_func = [min, range](float x) { return ((x - min) / range) * 4096; };
 
     if (contrast) {
         converted = ApplyFunc<ImageF32L3D, float>(converted, contrast_func);
