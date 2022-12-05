@@ -204,11 +204,13 @@ int main (int argc, char ** argv) {
 
                             if (ida == idb) {
                                 try {
-                                    ROI roi;
+                                    std::vector<Transform> transforms;
+                                    Transform master_t;
                                     std::cout << "Masking: " << dat << std::endl;
-                                    if (ProcessMask(options, tiff_anno, log, dat, ROTS, image_idx, roi)) {
+
+                                    if (ProcessMask(options, tiff_anno, log, dat, image_idx, master_t, transforms)) {
                                         std::cout << "Stacking: " << tiff_input << std::endl;
-                                        int background = TiffToFits(options, ROTS, tiff_input, image_idx, roi);
+                                        int background = TiffToFits(options, master_t, transforms, tiff_input, image_idx);
                                         std::cout << "Pairing " << tiff_anno << " with " << dat << " and " << tiff_input << std::endl;
 
                                         /* CSV Line 
@@ -228,17 +230,20 @@ int main (int argc, char ** argv) {
                                             fits_mask = libcee::StringReplace(fits_mask, rep.first, rep.second);
                                         }
 
+                                        // ROI only really matters on the first 
                                         if (options.num_augs > 1) {
                                             for (int ci = 0; ci < options.num_augs; ci++) {
                                                 std::string aug_id  = libcee::IntToStringLeadingZeroes(ci, 2);
                                                 output_mask_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_mask.fits";
                                                 output_source_name = options.output_path + "/" +  libcee::IntToStringLeadingZeroes(image_idx, 5) + "_" + aug_id + "_layered.fits";
-                                            
+                                                ROI roi = transforms[ci].roi;
+
                                                 out_csv_stream << tiff_input << "," << tiff_anno << "," << fits_source << "," << fits_mask << "," 
                                                     << log << "," << dat << "," << output_source_name << "," << output_mask_name << ","
                                                     << roi.x << "," << roi.y << "," << roi.z << "," << roi.xy_dim << "," << roi.depth << "," << background << "\n";
                                             }
                                         } else {
+                                            ROI roi = transforms[0].roi;
                                             out_csv_stream << tiff_input << "," << tiff_anno << "," << fits_source << "," << fits_mask << "," 
                                             << log << "," << dat << "," << output_source_name << "," << output_mask_name << ","
                                             << roi.x << "," << roi.y << "," << roi.z << "," << roi.xy_dim << "," << roi.depth << "," << background << "\n";

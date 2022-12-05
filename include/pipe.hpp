@@ -25,9 +25,13 @@
 #include "options.hpp"
 #include "image.hpp"
 
+typedef struct {
+    ROI roi;
+    glm::quat rot;
+} Transform;
+
 imagine::ImageF32L3D ProcessPipe(imagine::ImageU16L3D const &image_in, bool autoback, float noise, bool deconv, const std::string &psf_path, int deconv_rounds);
-int TiffToFits(const Options &options, const std::vector<glm::quat> &ROTS, std::string &tiff_path, int image_idx, ROI &roi);
-bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, std::string &coord_path, std::vector<glm::quat> &ROTS, int image_idx, ROI &roi);
-bool ProcessMaskNoAug(Options &options, std::string &tiff_path, std::string &log_path, std::string &coord_path, int image_idx, ROI &roi);
+int TiffToFits(const Options &options, const Transform &master_t, const std::vector<Transform> &transforms, std::string &tiff_path, int image_idx);
+bool ProcessMask(Options &options, std::string &tiff_path, std::string &log_path, std::string &coord_path, int image_idx, Transform &master_t, std::vector<Transform> &transforms);
 
 #endif

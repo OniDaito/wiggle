@@ -131,19 +131,13 @@ int main (int argc, char ** argv) {
         }
     }
 
-    ROI roi;
-    std::vector<glm::quat> ROTS;
+    std::vector<Transform> trans;
+    Transform master_t;
     std::string coord_path = "";
-
     std::cout << "Processing: " << image_path << " with " << watershed_path << " and " << annotation_path << std::endl;
     
-    if (options.num_augs > 1) {
-        ProcessMask(options, watershed_path, annotation_path, coord_path, ROTS, 0, roi);
-        TiffToFits(options, ROTS, image_path, 0, roi);
-    } else {
-        ProcessMaskNoAug(options, watershed_path, annotation_path, coord_path, 0, roi);
-        TiffToFits(options, ROTS, image_path, 0, roi);
-    }
+    ProcessMask(options, watershed_path, annotation_path, coord_path, 0, master_t, trans);
+    TiffToFits(options, master_t, trans, image_path, 0);
  
     return EXIT_SUCCESS;
 

@@ -34,6 +34,8 @@ if __name__ == "__main__":
         #hdul = w[0].data.astype('float32')
         hdul = w[0].data.byteswap().newbyteorder().astype('float')
         target = np.array(hdul, dtype=np.float32)
+
+        target =  target * (100.0 / np.sum(target)) 
  
         print(target)
         vedo_vol = Volume(target, alpha=0.4, mode=1)
