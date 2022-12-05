@@ -124,9 +124,6 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in, bool autoback, float noise,
     float range = max - min;
     std::function<float (float)> contrast_func = [min, range](float x) { return ((x - min) / range) * 4096; };
 
-    if (contrast) {
-        converted = ApplyFunc<ImageF32L3D, float>(converted, contrast_func);
-    }
 
     // Perform a subtraction on the images, removing background
     if (deconv){ 
@@ -146,13 +143,20 @@ ImageF32L3D ProcessPipe(ImageU16L3D const &image_in, bool autoback, float noise,
         ImageF32L3D deconved = DeconvolveFFT(converted, kernel, deconv_rounds);
 
         if (dropped) {
-            converted.data.push_back(last_slice);
-            converted.depth += 1;
+            deconved.data.push_back(last_slice);
+            deconved.depth += 1;
+        }
+
+        if (contrast) {
+            deconved = ApplyFunc<ImageF32L3D, float>(deconved, contrast_func);
         }
 
         return deconved;
     }
 
+    if (contrast) {
+        converted = ApplyFunc<ImageF32L3D, float>(converted, contrast_func);
+    }
 
     return converted;
 }
