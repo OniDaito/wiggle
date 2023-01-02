@@ -1,8 +1,8 @@
 #!/bin/sh
-touch dataset_3d_deconv_1.log
-touch dataset_3d_deconv_2.log
-touch dataset_3d_deconv_3.log
-touch dataset_3d_deconv_4.log
+touch dataset_1.log
+touch dataset_2.log
+touch dataset_3.log
+touch dataset_4.log
 
 ./release/wiggle -t -u -r -d -j 200 -w 100 -h 100 -z 25 -q 1 -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL604_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL604_S1-d1.0 -o /phd/wormz/queelim/dataset_3d_deconv_small -n 100 >> dataset_3d_deconv_2.log &
 ./release/wiggle -t -u -r -d -j 200 -w 100 -h 100 -z 25 -q 1 -i /phd/wormz/queelim/ins-6-mCherry/20170724-QL922_S1-d1.0 -a /phd/wormz/queelim/ins-6-mCherry/Annotation/20170724-QL922_S1-d1.0 -o /phd/wormz/queelim/dataset_3d_deconv_small -n 200 >> dataset_3d_deconv_3.log &
